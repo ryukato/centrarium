@@ -3,6 +3,7 @@ layout: post
 title: git-branching-model
 date: 2017-10-24 16:55:50
 tags: git, branching
+categories: [Git]
 ---
 
 # Git Branching Model

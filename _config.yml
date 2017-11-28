@@ -196,3 +196,23 @@ protocols:
     os_repo: "https://github.com/bencentra/centrarium.com"
     os_rcs_type: "git"
     os_src: "git@github.com:bencentra/centrarium.com.git"
+
+collections:
+  tags:
+    output: true
+    permalink: /tags/:path/
+  authors:
+    output: true
+    permalink: /authors/:path/
+
+defaults:
+  - scope:
+      path: ''
+      type: tags
+    values:
+      layout: tag
+  - scope:
+      path: ''
+      type: authors
+    values:
+      layout: author
