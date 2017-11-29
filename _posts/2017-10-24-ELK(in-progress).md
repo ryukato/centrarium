@@ -2,8 +2,8 @@
 layout: post
 title: ELK 정리중
 date: 2017-10-24 16:57:29
-tags: git
-categories: [git]
+tags: logstash, elasticsearch, kibana
+categories: [ELK]
 ---
 
 # ELK (Elasticsearch, Logstash, Kibana)
