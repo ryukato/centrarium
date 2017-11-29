@@ -3,7 +3,7 @@ layout: post
 title: Pro git 번역중
 date: 2017-10-24 16:57:29
 tags: git
-categories: [git]
+categories: [Git]
 ---
 
 # Pro Git
