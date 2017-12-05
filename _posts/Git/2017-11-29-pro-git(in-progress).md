@@ -5,6 +5,8 @@ date: 2017-10-24 16:57:29
 tags: git
 categories: [Git]
 ---
+* TOC
+{:toc}
 
 # Pro Git
 본 문서의 모든 이미지 및 코드들은 Pro Git에서 발췌한 것이다.
@@ -364,3 +366,57 @@ git branch --no-merged master
 topicA
 featureB
 ```
+
+#### 작업 흐름(workflow)에 맞게 Branching 하기
+
+보통의 프로젝트에서는 계발 그리고 운영 등으로 개발 환경을 구분하여 사용한다. 이런 개발 환경은 개발 정책에 따라 변경이 되는데, 단순히 개발 그리고 운영으로 나누기 보단 개발, 릴리즈, 스테이지 그리고 운영(Production)으로 나누어 개발을 진행하게 된다.
+
+이제 이전에 살펴 보았던 branching과 병합(merging)을 활용하여 많이 사용되는 workflow들을 살펴 볼 것이고, 살펴본 workflow들을 자신의 개발주기에 사용할지를 결정 할 수 있을 것이다.
+
+##### Long-Running Branches
+
+Git은 단순한 3-way merge를 사용하기때문에, 오랜 기간에 걸쳐 여러번 발생되는 특정 branch에서 다른 branch로의 병합을 쉽게 할 수 있다. 이를 통해 개발 주기의 각 단계에 해당 하는 branch를 만들어 사용 할 수 있고, 각 단계별 branch에서 다른 단계의 branch로 주기적인 병합을 할 수 있다.
+
+보통 Git을 사용하는 많은 개발자들은 운영(Production) 환경에 배포되는 그리고 항상 결합 없이 안정된 코드를 포함하는  master branch와 개발 환경을 위한 develop(혹은 next) branch를 사용한다. develop branch는 항상 모든 코드가 안정될 필요는 없고 테스트를 위한 branch로 사용이 된다. 그리고 테스트를 거쳐 안정된 상태가 보장이 될때 master branch로 병합한다. 또한 특정 기능개발등을 위한 branch(예,  이전에 사용했던 iss53 branch)를 생성하는 기준이 되는 branch로 develop branch를 사용한다.
+
+실제로는 일련의 commit으로 구성되는 선을 따라 움직이는 포인터에 대해 말하고 있는 것인데, master branch와 같이 안정된 branch들은 그 포인터가 commit history상에서 아래쪽에 존재하게 되며, develop branch 혹은 특정 기능 개발을 위한 branch들은 그 포인터가 commit history상의 위쪽에 존재하게 된다. 아래의 그림을 보면 쉽게 이해 할 수 있을 것이다.
+
+![](/assets/pro_git/a_linear_view_of_progressive_stability_branching.png)
+(*  출처: Pro Git)
+
+각 branch들은 commit들을 포함하고 있는 일종의 저장소로 생각하면 좋다. 그리고 테스트를 거친 commit들은 안정된 branch로 병합이 된다.
+
+![](/assets/pro_git/a_silo_view_of_progressive_stability_banching.png)
+(*  출처: Pro Git)
+
+여러 안정성 단계, 즉 topic, develop 그리고 master와 같이 안정성별로 branch를 유지하는 방법을 사용할 수 있다. 일부 규모가 큰 프로젝트에서는 **proposed** 혹은 pu (proposed updates) branch를 두는데, 그 이유는 develop 혹은 master branch로의 병합이 아직 준비가 되지 않은 사항들을 통합하여 저장해 놓기 위함이다.
+
+ 각 안정성 단계별로 branch를 두는 것은 각 단계별로 좀 더 안정성이 보장되도록 하기 위함이고 각 단계별 안정성이 만족이 되면 다음 단계 즉, 다음 branch로 병합하여 이동 시키기 위함이다. long-running branch들을 두는 것이 필수는 아니지만 규모가 크고 복잡한 프로젝트를 잘 관리하는데 많은 도움이 된다.
+
+#### 토픽 Branches
+
+프로젝트의 규모에 상관없이 topic branch를 유용하게 사용할 수 있다. Topic branch는 특정 기능 혹은 관련 작업만을 위한 용도로 사용되기때문에 짧은 기간의 생명주기를 가진다. 이런 topic branch의 사용은 기존 VCS와 같은 기존의 소스 관리 시스템에서는 거의 사용을 하지 않는데, 그 이유는 branch를 생성하고 병합하는 비용이 너무 비싸기 때문이다. 하지만 Git을 사용하게 되면 하루동안에 여러개의 branch들을 생성하고 생성된 branch에서 작업한후 병합 및 삭제하는 것이 쉽고 일상적인 일이다.
+
+이전에 살펴 보았던 iss53과 hotfix branch들을 보면 알 수 있을 것이다. 몇개의 commit을 branch에 적용하고 주(main) branch에 병합한 후에, 바로 삭제 하였다. 이렇게 쉽게 branch를 생성, 병합 그리고 삭제하는 기술은 작업의 전환(context-switch)를 빠르고 완전하게 할 수 있도록 해준다. 왜냐면, 해야할 작업 자체가 해당 작업과 관련되 branch의 모든 변경 사항을 포함하고 있는 각 저장소에 분리되기 때문이다. 그래서 코드 리뷰와 같은 활동안에서 발생 했던 일들을 쉽게 파악할 수 있다. 변경 사항들을 특정 기간에 상관없이 가지고 있을 수 있고, 병합할 준비가 되었을때 branch를 언제 생성했고 언제 작업을 했는지에 상관없이 병합을 할 수 있다.
+
+다음의 예를 한번 살펴 보자. 이미 master branch에서 몇개의 작업을 수행하였고, iss91번을 처리하기 위해 별도의 branch를 생성하였다. 그리고 동일한 이슈(iss91)을 처리하기 위하 다른 방법을 살펴보기 위해 두번째 branch를 생성하였다. 그런 후에 다시 master branch로 돌아가 잠시동안 작업을 한뒤, 좋은 방안인지는 모르지만 다른 방법으로 코드 작업을 수행한 branch(dumbidea)를 생성하였다. 이런 상황을 거친뒤의 각 branch의 commit history는 아래와 같을 것이다.
+
+![](/assets/pro_git/multiple_topic_branches.png)
+(*  출처: Pro Git)
+
+이제, 두번째 해결책(iss91v2)가 가장 좋다고 결정했다고 하자. 그리고 dumbidea branch를 동료에게 보여주었고, 그 방안이 두번째 해결책보다 더 좋은 천재적인 방안으로 판명 되었다. 그래서 iss91 branch는 버려버리고(C5와 C6 commit은 잃어버리게 된다) 다른 두 branch들을 병합한다. 그러면 commit history는 아래와 같을 것이다.
+
+![](/assets/pro_git/history_after_merging_dumbidea_and_iss91v2.png)
+(*  출처: Pro Git)
+
+위에서 했던 모든 작업은 모두 local에서 이루어진 것이라는 것을 명심해야 한다. 새로운 branch를 만들고 병합하는 등의 모든 작업은 local의 Git 저장소에서 이루어진 것이다. 원격의 서버와는 아무런 통신이 이루어 지지 않았다.
+
+#### 원격 Branches
+
+ 원격 참조는 branch, tag 등등을 포함하는 원격 저장소의 참조(포인터)이다. 원격 저장소에 대한 참조 값의 목록은 ```git ls-remote```, ```git remote``` 혹은 ```git remote show [remote]``` 명령어를 통해 확인할 수 있다. ```git remote show [remote]``` 명령은 원격 branch들 뿐만 아니라 더 많은 정보를 보여준다. 위와 같은 명령어를 통해 원격 저장소를 확인하는 방법에도 불구하고 좀 더 일반적인 방법은 원격-추적(remote-tracking) branch들을 활용하는 것이다.
+
+ 원격-추적 branch들은 원격 branch들의 상태에 대한 참조값인데, 직접 옮길 수 없는 local 참조값이다. Git이 네트웍을 통한 통신을 할때마다 그 참조값들이 원격 저장소의 상태를 정확히 반영하고 있는지를 확신하기 위해서 local 참조값들을 옮겨준다.
+
+ 원격-추적 branch는 **\<remote\>/\<branch\>**의 형태를 취한다. 예를 들어 원격 저장소인 마지막으로 통신했을때 그때 그대로의 상태를 가지고 있을 것으로 보이는 origin의 mater branch를 보고 싶을 경우, **origin/master** branch를 확인하면 된다. 만약 파트너와 함께 이슈처리를 위한 작업을 수행하면서 파트너들이 iss53 branch를 push를 했을 경우, 이미 local에 iss53 branch가 있을 수 있다. 하지만 서버상에 존재하는 branch는 local에서 **origin/iss53**으로 표현된다.
+
+ 이게 약간 헛갈릴 수 있는데, 예를 한번 들어보자. Git 서버가 <span>git</span>.<span>compnay</span>.com의 네트웍상에 존재 한다고 하자. 이 원격의 Git 서버에서 clone을 해서 local 저장소를 만들었을때, Git의 clone 명령어는 자동으로 **origin**이라는 원격 저장소에 대한 참조값을 생성한다. 그리고 원격 저장소의 모든 데이터를 가져오고 원격 저장소의 **master** branch를 참조하는 **origin/master** 포인터를 로컬(local)에 생성한다. 또한  Git은  **원격의 master** branch와 동일한 상태를 가지는 **로컬의 master** branch를 생성한다. 따라서 **로컬의  master** branch에서 작업을 시작할 수 있다.
