@@ -29,19 +29,19 @@ CQRS는 오늘날의 소프트웨어 환경을 지배하는 계층화 된 아키
  이것이 Axon Framework가 생각한 이유입니다. 개발자가 비즈니스 로직에 중점을 두면서 CQRS 응용 프로그램을 구현할 수 있도록 도와줍니다.
 
 
-## What is Axon?, Axon 이란?
+### What is Axon?, Axon 이란?
 Axon Framework은 CQRS 아키텍쳐 패턴을 개발자가 적용할 수 있도록 지원하여 규모 가변적이고 확장성이 있으며 유지 보수가 가능한 애플리케이션의 구축을 도와 줍니다.
 
 Axon Framework은 aggregate, repository 그리고 이벤트 버스(이벤트를 전파하는 구조)등과 같은 핵심이 되는 빌딩 블럭(building block)들을의 구현체를 제공합니다. 게다가 Axon의 특정 로직에 묶여야 하는 코드 작성 없이 aggregate들과 이벤트 리스너를 개발할 수 있는 애노테이션(annotation)들을 Axon에서 제공합니다. 따라서 개발자는 비지니스 로직에 보다 초점을 맞춰서 개발할 수 있고, 독립된 환경에서 테스트를 쉽게 수행할 수 있습니다.
 
 Axon은 CQRS 아키텍쳐 혹은 관련 콤포넌트들을 숨기려 하거나 하지 않습니다. 따라서 CQRS에 대하 세세히 알고 있는 개발자가 팀안에 한명 혹은 그 이상 있는 것이 좋습니다.
 
-Axon을 사용하여, 올바른 이벤트 리스너에게 이벤트를 전달하고 전달된 이벤트들을 정확한 순서로 동시에 처리하도록 할 수 있습니다. 다중 쓰레드와 관련된 고려 사항들은 일반적으로 다루기 어렵고 버그가 발생해도 추적하기 어려습니다. 심지어 때때로 애플리케이션의 오작동을 일으 킬 수 도 있습니다.  그렇지만 Axon framework 내의 코드들은 다중 쓰레드와 관련된 유형의 버그들이 발생하지 않도록 꼼꼼히 검증이 되어 있습니다.
+Axon을 사용하면, 올바른 이벤트 리스너에게 이벤트를 전달하고 전달된 이벤트들을 정확한 순서로 동시에 처리하도록 할 수 있습니다. 다중 쓰레드와 관련된 고려 사항들은 일반적으로 다루기 어렵고 버그가 발생해도 추적하기 어려습니다. 심지어 때때로 애플리케이션의 오작동을 일으 킬 수 도 있습니다.  그렇지만 Axon framework 내의 코드들은 다중 쓰레드와 관련된 유형의 버그들이 발생하지 않도록 꼼꼼히 검증이 되어 있습니다.
 
 Axon Framework은 다수의 모듈(jar)로 구성이 되어 있습니다. 각 모듈은 규모 가변적 기반을 구축하기 위한 콤포넌트와 도구들을 제공합니다. Axon Core 모듈은 각기 다른 콤포넌트들을 위한 기본적인 API들과 단일 JVM 애플리케이션에 적합한 솔루션을 제공하는 간단한 구현체들을 제공합니다. 다른 모듈들은 규모 가변성과 고 성능 관련 이슈들을 다루기 위해 특화된 빌딩 블럭들을 제공합니다.
 
 
-## When to use Axon?, 언제 Axon을 사용해야 할까?
+### When to use Axon?, 언제 Axon을 사용해야 할까?
 모든 애플리케이션 개발에 Axon이 적합한 것은 아닙니다. 단순히 생성,조회, 수정 및 삭제 기능이 주를 이루며 규모를 가변적으로 늘이고 줄이지 않는 애플리케이션 개발에는 CQRS 혹은 Axon을 사용함으로써 얻는 이득이 없습니다. 그렇지만 다양항 범위의 애플리케이션들의 개발에 Axon을 사용할 수 있습니다.
 
 CQRS와 Axon을 사용하기 좋은 애플리케이션들은 다음의 특징들 중 하나 혹은 그 이상의 특징을 가집니다.
@@ -57,11 +57,69 @@ CQRS와 Axon을 사용하기 좋은 애플리케이션들은 다음의 특징들
 * 기존의 애플리케이션과 다른 애플리케이션을 통합하는 것은 까다로운 작업입니다. 이런 경우에도 명령과 이벤트를 사용하여 엄격히 정의된 애플리케이션의 API가 있다면, 다른 외부 애플리케이션과의 통합을 보다 쉽게 할 수 있습니다. 어떤 애플리케이션이라도 명령을 보내고 기존의 애플리케이션에서 생성된 이벤트를 수신할 수 있기 때문입니다.
 
 
+### Getting started, 시작하기
+Axon framework을 가지고 시작하기 위해선, Axon 라이브러리 파일들을 Axon 웹 사이트에서 직접 내려받거나 Maven, Gradle과 같은 빌드 시스템 설정을 통해 Axon 라이브러리 파일들을 받을 수 있습니다.
 
+### Download Axon, Axon 다운로드하기
+[axonframework.org/download](http://www.axonframework.org/download/)을 통해 직접 Axon framework을 다운 받을 수 있습니다.
 
+현재 버전별로 다운로드를 제공하고 있지만, 최신의 안정된 버전을 다운로드 합니다. 만약 가장 최신을 기능들을 사용해 보고 싶다면, 스냅샵 배포버전을 사용할 수 있습니다. Axon framework 파일과 Axon framework이 필요로 하는 라이브러리 그리고 소스와 문서들을 포함한 전체(full) 패키지를 다운로드 합니다.
 
+현재 개발 진행 중인 Axon을 받고 싶다면, Axon framework의 Git 저장소를 복제(clone)하실 수 있습니다. 다음은 Axon framework의 Git 저장소 주소 입니다.
 
+* git://github.com/AxonFramework/AxonFramework.git
+* https://github.com/AxonFramework/AxonFramework
 
+### Maven 설정
+빌드 도구로 메이븐(Maven)을 사용하고 있다면, 아래와 같이 의존관계를 추가하여 Axon을 사용할 수 있습니다.
+
+```
+<dependency>
+    <groupId>org.axonframework</groupId>
+    <artifactId>axon-core</artifactId>
+    <version>${axon.version}</version>
+</dependency>
+```
+Axon framework이 제공하는 대부분의 기능은 선택 가능하며 추가적인 의존관계(다른 라이브러리)를 필요로 합니다. 불필요한 라이브러리로인해 프로젝트가 복잡해 지는 것을 방지하기 위해 추가적인 의존관계를 자동으로 추가하지 않도록 하였습니다
+
+### Infrastructure requirements, 인프라 요구 사항
+Axon framework으로 개발하는데 특별히 요구되는 인프라는 없습니다. Java8을 대상으로 만들어지고 테스트하였기 때문에 Java8은 반드시 필요합니다.
+
+Axon 자체적으로 외부 시스템(예, DBMS)에 대한 연결 혹은 쓰레드를 생성하지 않기 때문에, 보통의 애플리케이션 서버에서 Axon을 실행할 수 있습니다. Axon은 모든 비동기 관련 작업을 ```Executor```를 사용하여 추상화하였습니다. 따라서 컨테이너에 의해서 관리되는 쓰레드 풀(Thread pool)을 쉽게 전달하여 사용할 수 있습니다. Tomcat, Jetty 혹은 오프라인으로도 동작 가능한 stand-alone 애플리케이션과 같은 애플리케이션 서버를 사용하지 않는다면, 쓰레드 풀을 생성하고 설정하기 위해 ```Executors``` 혹은 Spring framework을 사용할 수 있습니다.
+
+### When you're stuck, 도움이 필요할때.
+애플리케이션을 개발하면서, 왜 발생 했는지 잘 모르는 문제에 부딪치거나 스스로 답을 찾기 어려운 궁금증이 생길 수 있습니다. Axon 사용자 메일링 리스트를 통해 도움을 받을 수 있습니다. <a href="mailto:axonframework@googlegroups.com">axonframework@googlegroups.com</a>으로 메일을 보내 주시면 다른 사용자들이나 Axon framework을 만들어 가는 분들이 문제 해결에 도움을 드릴 수 있습니다.
+
+Axon framework에 대한 버그를 발견하셨다면, [issues.axonframework.org.](issues.axonframework.org)으로 발견하신 버그를 알려주세요. 그리고 버그를 알려주실 때, 발견한 버그에 대해 실제 결과와 기대 했던 결과와 함께 충분한 설명을 달아 주셔야 합니다. 가능하다면, 버그가 발생하는 것을 확인할 수 있는 간단한 단위 테스트 코드를 함께 보내주세요. 위와 같이 해주시다면 문제 해결에 많은 도움이 될 수 있습니다.
+
+### Contributing to Axon Framework, Axon Framework에 기여하기
+Axon Framework은 현재 개발 중에 있습니다. 규모 가변적이고 확장 가능한 애플리케이션을 보다 쉽게 만들 수 있도록 하기 위해 Axon Framework에 새로운 기능들을 추가할 것입니다. 그렇기때문에 여러분의 도움을 기다리고 있습니다.
+
+다음과 같은 방법을 통해 도움을 주실 수 있습니다.
+* [issues.axonframework.org.](issues.axonframework.org)를 통해 발견한 버그 혹은 새로운 기능 요청 그리고 개선점등을 보내 주세요. 어떤 내용이라도 보내 주시면 됩니다. 단 버그를 발견하여 알려 주실 때는 최대한 자세한 내용을 알려 주셔야, 저희가 빨리 동일한 버그를 재현하고 처리하는데 많은 도움이 됩니다.
+* 애플리케이션 개발 중, Axon framework에 도움이 될 것 같은 콤포넌트를 개발하셨다면, 저희에게 소스 파일을 포함한 패치 혹은 압축 파일을 보내 주세요. 보내 주신 코드 내용을 검토하여 Axon framework에 반영하도록 노력하겠습니다. 소스 코드를 보내 주실땐, javadoc을 사용하여 코드에 대한 문서를 만들어 주세요. 저희가 소스 코드를 이해하는데 많은 도움이 됩니다.
+* 위의 방법이외에도 저희에게 도움이 될 다른 방법이 있다면 주저하지 마시고 <a href="mailto:axonframework@googlegroups.com">Axon Framework mailing list.</a>으로 메세지를 보내 주세요.
+
+### Commercial Support, 유료 지원
+Axon Framework은 오픈 소스이며 누구든지 사용 가능합니다. 단 특정 목적이나 문제가 발생하여 즉각적인 도움을 원하신다면, AxonIQ를 통해 유료 지원을 받을 수 있습니다. 해당 서비스는 Axon에 대해 상당한 경험과 지식을 가지고 있는 분들로 부터 교육, 자문 긜고 운영 지원을 받을 수 있습니다.
+
+AxonIQ를에 대한 상세 내용을 원하시면, [axoniq.io](https://axoniq.io/) 혹은  [axoniq.io/services](https://axoniq.io/services)를 방문해 주세요.
+
+### License information, 라이센스 정보
+Axon Framework과 관련 문서들은 "**Apache License, Version 2.0.**"로 배포되고 있습니다. 라이센스에 대한 복사본은 [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)을 통해 확인 할 수 있습니다.
+
+관련법에 의해 요구되거나 서면으로 동의하지 않는 한, 라이센스에 따라 배포 된 소프트웨어는 명시 적 또는 묵시적으로 어떠한 종류의 보증이나 조건없이 "있는 그대로"의 상태로 배포됩니다. 라이선스에 따른 사용 권한 및 제한 사항을 설명하는 특정 언어에 대한 [라이센스](http://www.apache.org/licenses/LICENSE-2.0)를 참조하십시오.
+
+### Architectural Overview,
+CQRS는 자체만 보면 정말 간단한 패턴입니다. CQRS는 명령을 처리하기 위한 애플리케이션 콤포넌트와 조회를 위한 콤포넌트를 분리하도록 규정합니다. 명령 및 조회 콤포넌트를 분리하는 것은 그 자체로만 보면 단순해 보이지만, 다른 패턴들과 결합하게 되면 여러가지 강력한 기능을 제공합니다. Axon은 CQRS와 조합하여 사용할 수 있는 다른 패턴들을 쉽게 구현할 수 있는 빌딩 블럭(building block)들을 제공합니다.
+
+아래의 다이어그램은 CQRS 기반의 이벤트 기반 아키텍쳐(event driven architecture)의 확장된 레이아웃입니다. 왼쪽에 표시된 UI(User Interface) 콤포넌트는 두 방향으로 애플리케이션의 다른 부분과 연동합니다. UI 콤포넌트는 애플리케이션으로 명령을 요청하고 다른 방향으로는 특정 정보를 얻기 위해 애플리케이션으로 조회 요청을 합니다. (조회 요청은 다이어그램의 하단을 보면 됩니다.)
+
+![](file:///Users/yoonyoulyoo/Desktop/extended_layout_of_cqrs_eda.png)
+
+명령들은 일반적으로 간단명료한 객체들로 표현이 되며, 명령을 표현하는 객체들은 명령 처리자(command handler)가 명령을 처리하기 위해 필요한 모든 데이터들을 포함합니다. 명령의 이름만으로도 그 의도를 파악 할 수 있어야 합니다. 즉, 명령 객체를 표현하기 위한 클래스의 이름과 명령 객체의 속성(field)명을 통해 의도와 명령을 처리하기 위해 필요한 데이터가 무엇 인지를 파악할 수 있어야 합니다.
+
+커맨드 버스(Command Bus)는 명령들을 수신하고 명령을 처리할 수 있는 명령 처리자(command handler)에게 명령을 분배 합니다.
 
 
 
