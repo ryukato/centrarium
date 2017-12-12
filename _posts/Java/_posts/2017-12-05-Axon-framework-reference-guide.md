@@ -217,7 +217,7 @@ Axon Framework은 스프링을 광범위하게 지원하지만 Axon을 사용하
 > 예를 들어 상태의 변경을 나태내기 위해 추상 구현체로 **AddressChangedEvent** 를 사용하고, 상세 의도를 표현하기 위한 두개의 하위 구현체로 **ContactMovedEvent** 와 **AddressCorrectedEvent** 를 사용할 수 있습니다.
 > 몇몇 이벤트 리스터(listener)들은 이벤트의 의도에 별 개의치 않습니다. (예, 데이터 베이스에 값을 갱신하는 이벤트 리스트) 이런 리스너들은 추상 타압(상위 타입)의 객체를 받아 처리하지만, 이벤트의 변경 의도에 맞는 하위 타입의 겍체를 받아 처리하는 리스너들을 사용하여 주소 변경에 대한 이메일 알림을 을 고객에게 발송하도록 할 수 있습니다.
 
-![](/Users/yoonyoulyoo/Documents/ryukato.github.io/assets/axon/state_change_and_intent_types.png)
+![](/assets//axon/state_change_and_intent_types.png)
 
 이벤트 버스로 이벤트를 전달할때, 해당 이벤트를 이벤트 메세지로 감싸줘야 합니다. **GenericEventMessage** 를 사용하여 해당 이벤트를 이벤트 메세지안에 포함 시킬 수 있으며, 이때 **GenericEventMessage** 의 생성자 혹은 클래스 메서드인 **asEventMessage()** 메서드를 사용할 수 있습니다. **asEventMessage** 메서드는 주어진 이벤트가 이미 **EventMessage** 이면, 바로 이벤트를 반환하고 Message의 하위 객체라면 주어진 이벤트를 **GenericEventMessage** 로 반환 하는데 주어진 이벤트(메세지 하위 객체)의 페이로드와 메타 테이터를 사용 그대로 사용하게 됩니다. 특정 이벤트가 Aggregate으로부터 발생되었다면, Axon은 해당 이벤트를 **DomainEventMessage** 로 감싸주게 되며, **DomainEventMessage** 는 Aggregate의 식별자, 유형(타입) 그리고 일련 번호를 포함하게 됩니다.
 
