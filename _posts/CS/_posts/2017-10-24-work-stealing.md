@@ -6,6 +6,9 @@ tags: parallel-computing, work-stealing
 categories: [Parallel-computing]
 ---
 
+* TOC
+{:toc}
+
 원본: https://en.wikipedia.org/wiki/Work_stealing
 
 # Work stealing

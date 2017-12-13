@@ -6,6 +6,9 @@ tags: FP, scala
 categories: [FP]
 ---
 
+* TOC
+{:toc}
+
 # Functional Programming
 ## Basic Concepts
 ### Pure Functions(순수 함수)

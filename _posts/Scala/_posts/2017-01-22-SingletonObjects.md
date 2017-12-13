@@ -6,6 +6,9 @@ tags: FP, scala, Scala Tutorial 번역
 categories: [FP, Scala]
 ---
 
+* TOC
+{:toc}
+
 ## Singleton Objects
  Scala는 Java보다 좀 더 객체지향이라고 할 수 있다. 그 이유는 Scala는 static member를 가질 수 없기때문이다. static member대신에 singleton 객체를 제공한다.
 

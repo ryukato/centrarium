@@ -6,6 +6,9 @@ tags: FP, scala
 categories: [FP, Scala]
 ---
 
+* TOC
+{:toc}
+
 # Scala
 ## Unified Types
 자바와는 대조적으로, Scala에서는 아래에 명시된 모든 값은 객체들이다.

@@ -6,6 +6,9 @@ tags: FP, scala, Scala Tutorial 번역
 categories: [FP, Scala]
 ---
 
+* TOC
+{:toc}
+
 ## Case class
 Scala는 case class를 지원한다. Case class는 다음과 같은 특징을 가지는 일반 class이다.
 - 기본적으로 case class를 통해 생성되는 인스턴스는 불변(Immutable)이다.
