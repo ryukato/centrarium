@@ -6,6 +6,9 @@ tags: JAVA, Axon, Axon-framework, CQRS
 categories: [Java]
 ---
 
+* TOC
+{:toc}
+
 # Axon framework
 ## Introduction
 Axon은 규모 가변성과 확장성에 대한 문제를 아키텍쳐적으로 직접 해결하여 규모 가변적이고 확장 가능한 애플리케이션을 구축을 도와주는 가벼운 프레임워크입니다. 이 문서는 Axon이 무엇인지와 어떻게 사용하는지 그리고 Axon이 어떻게 개발을 도와 줄 수 있는지를 설명할 것입니다.
