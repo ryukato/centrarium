@@ -2,7 +2,7 @@
 layout: post
 title: ELK 정리중
 date: 2017-10-24 16:57:29
-tags: logstash, elasticsearch, kibana
+tags: logstash elasticsearch kibana 로그스테쉬 엘라스틱서치 키바나
 categories: [ELK]
 ---
 

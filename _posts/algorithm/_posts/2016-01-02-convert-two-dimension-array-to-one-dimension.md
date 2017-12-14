@@ -2,7 +2,7 @@
 layout: post
 title: Converting two dimension array to one dimension array.
 date: 2016-01-02 09:36:55
-tags: Algorithm, convert-array-dimension.
+tags: Algorithm convert-array-dimension
 categories: [Algorithm]
 ---
 

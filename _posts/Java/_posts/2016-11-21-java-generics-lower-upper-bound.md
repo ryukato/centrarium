@@ -2,7 +2,7 @@
 layout: post
 title: Java Generics - Lower and Upper bound
 date: 2016-11-21 09:36:55
-tags: JAVA, Generics, Lower bound, Upper bound
+tags: JAVA Generics Lower-bound Upper-bound 자바 지네릭 로우바운드 어퍼바운드
 categories: [Java]
 ---
 

@@ -2,7 +2,7 @@
 layout: post
 title: Scala Tutorial 번역 - Unified Types, Mixin and Composition
 date: 2016-12-19 09:36:55
-tags: FP, scala
+tags: FP scala 함수형언어 스칼라
 categories: [FP, Scala]
 ---
 

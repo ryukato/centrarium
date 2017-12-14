@@ -2,7 +2,7 @@
 layout: post
 title: Scala Tutorial 번역 - Pattern Matching
 date: 2017-01-14 09:36:55
-tags: FP, scala, Scala Tutorial 번역
+tags: FP scala Scala-Tutorial-번역 스칼라 패턴매칭
 categories: [FP, Scala]
 ---
 

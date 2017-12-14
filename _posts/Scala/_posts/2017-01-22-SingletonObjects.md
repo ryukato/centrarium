@@ -2,7 +2,7 @@
 layout: post
 title: Scala Tutorial 번역 - Singleton object, Companion
 date: 2017-01-22 09:36:55
-tags: FP, scala, Scala Tutorial 번역
+tags: FP scala Scala-Tutorial-번역 스칼라 싱클톤 컴페니온
 categories: [FP, Scala]
 ---
 

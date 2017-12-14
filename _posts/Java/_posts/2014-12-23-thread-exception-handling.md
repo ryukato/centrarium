@@ -2,7 +2,7 @@
 layout: post
 title: Thread에서 발생한 예외 처리하기
 date: 2014-12-23 09:36:55
-tags: Java, thread, exception-handling
+tags: Java thread exception-handling 자바 쓰레드-예외-처리
 categories: [Java]
 ---
 

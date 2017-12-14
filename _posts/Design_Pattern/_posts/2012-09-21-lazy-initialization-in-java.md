@@ -2,7 +2,7 @@
 layout: post
 title: Lazy Initialization in Java
 date: 2012-09-21 09:36:55
-tags: Design Pattern, Java, Lazy-Initialization
+tags: Design Pattern Java Lazy-Initialization
 categories: [Design-pattern]
 ---
 * TOC

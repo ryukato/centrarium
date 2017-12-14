@@ -2,7 +2,7 @@
 layout: post
 title: Visitor 패턴 및 java.nio.Path, PathMatcher, Files를 이용한 File찾기 - Thread 활용
 date: 2014-07-11 09:36:55
-tags: Design Pattern, Java, Visitor, PathMatcher
+tags: Java Design-Pattern Visitor PathMatcher
 categories: [Design-pattern]
 ---
 
@@ -134,4 +134,4 @@ public class ResourceFinderRunnableMain {
 Collections.synchronizedSet 메서드를 활용해서 ResourceFinderRunnable객체가 찾은 파일을 담을 수 있도록 활용하였습니다.
 그리고 이미 추가한 파일은 추가하면 안된다는 조건을 추가하였고 그 이외에는 이전과 동일합니다.
 
-> 위와 같이 개별 Thread를 생성해서 처리하는 것보다는 Executors의 thread pool을 사용하는 것이 더 좋을 것으로 보이네요. 
+> 위와 같이 개별 Thread를 생성해서 처리하는 것보다는 Executors의 thread pool을 사용하는 것이 더 좋을 것으로 보이네요.

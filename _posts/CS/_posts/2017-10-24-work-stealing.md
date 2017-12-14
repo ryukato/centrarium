@@ -2,7 +2,7 @@
 layout: post
 title: work-stealing
 date: 2017-10-24 16:57:29
-tags: parallel-computing, work-stealing
+tags: parallel-computing work-stealing
 categories: [Parallel-computing]
 ---
 

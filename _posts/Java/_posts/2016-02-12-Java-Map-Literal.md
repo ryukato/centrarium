@@ -2,7 +2,7 @@
 layout: post
 title: Java Map Literal
 date: 2016-02-12 16:57:29
-tags: Java, Map, Literal
+tags: Java Map Literal 자바 맵 리터럴
 categories: [Java]
 ---
 * TOC
