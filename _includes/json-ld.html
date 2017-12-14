@@ -1,11 +1,13 @@
 <script type="application/ld+json">
 {
   "@context": "https://ryukato.github.io",
-  "@type": "Article",
+  "@type": "BlogPosting",
   "name": "{{page.title}}",
   "author": "Ryukato",
-  "datePublished":"{{page.date}}",
+  "datePublished":"{{page.date | date: "%F" }}",
   "description": "{{page.title}}",
-  "tags": "{{page.tags}}"
+  "tags": [
+    {% for tag in page.tags %}"{{ tag }}"{% if forloop.last == false %}, {% endif %}{% endfor %}
+  ]
 }
 </script>
