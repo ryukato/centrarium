@@ -9,7 +9,7 @@ exclude:
   - "/vendor/"
 
 # Site settings
-title: "Ryukato's"
+title: "Ryukato's Blog"
 subtitle: "Idea & notes about programming."
 email: ryukato79@gmail.com
 name: Yoonyoul Yoo
