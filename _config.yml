@@ -31,14 +31,14 @@ inter_post_navigation: false
 highlightjs_theme: "monokai-sublime"
 
 # Archive settings (see https://github.com/jekyll/jekyll-archives/)
-# jekyll-archives:
-#   enabled:
-#     # - categories
-#     - tags
-#   layout: archive
-#   permalinks:
-#     # category: '/category/:name/'
-#     tag: '/tag/:name/'
+jekyll-archives:
+  enabled:
+    # - categories
+    - tags
+  layout: archive
+  permalinks:
+    # category: '/category/:name/'
+    tag: '/tag/:name/'
 
 # Disqus comments
 disqus_shortname: ryukato
@@ -196,23 +196,3 @@ protocols:
     os_repo: "https://github.com/bencentra/centrarium.com"
     os_rcs_type: "git"
     os_src: "git@github.com:bencentra/centrarium.com.git"
-
-collections:
-  tags:
-    output: true
-    permalink: /tags/:path/
-  authors:
-    output: true
-    permalink: /authors/:path/
-
-defaults:
-  - scope:
-      path: ''
-      type: tags
-    values:
-      layout: tag
-  - scope:
-      path: ''
-      type: authors
-    values:
-      layout: author
