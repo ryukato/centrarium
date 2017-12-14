@@ -2,7 +2,7 @@
 layout: post
 title: Axon framework reference guide 번역 중.(on going)
 date: 2017-12-05 09:36:55
-tags: JAVA, Axon, Axon-framework, CQRS
+tags: JAVA Axon Axon-framework Axon-framework번역 CQRS
 categories: [Java]
 ---
 
