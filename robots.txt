@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ryukato.github.io/sitemap.xml
