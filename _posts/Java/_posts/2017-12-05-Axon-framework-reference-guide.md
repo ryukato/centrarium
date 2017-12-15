@@ -2,7 +2,7 @@
 layout: post
 title: Axon framework reference guide 번역 중.(on going)
 date: 2017-12-05 09:36:55
-tags: JAVA Axon Axon-framework Axon-framework번역 CQRS 자바 액손 엑손-프레임워크-번역
+tags: [JAVA, Axon, Axon-framework, Axon-framework번역, CQRS, 자바, 액손,엑손-프레임워크-번역]
 categories: [Java]
 ---
 
@@ -122,7 +122,7 @@ CQRS는 자체만 보면 정말 간단한 패턴입니다. CQRS는 명령을 처
 
 아래의 다이어그램은 CQRS 기반의 이벤트 기반 아키텍쳐(event driven architecture)의 확장된 레이아웃입니다. 왼쪽에 표시된 UI(User Interface) 콤포넌트는 두 방향으로 애플리케이션의 다른 부분과 연동합니다. UI 콤포넌트는 애플리케이션으로 명령을 요청하고 다른 방향으로는 특정 정보를 얻기 위해 애플리케이션으로 조회 요청을 합니다. (조회 요청은 다이어그램의 하단을 보면 됩니다.)
 
-![](file:///Users/yoonyoulyoo/Desktop/extended_layout_of_cqrs_eda.png)
+![](/assets/axon/extended_layout_of_cqrs_eda.png)
 
 명령들은 일반적으로 간단명료한 객체들로 표현이 되며, 명령을 표현하는 객체들은 명령 처리자(command handler)가 명령을 처리하기 위해 필요한 모든 데이터들을 포함합니다. 명령의 이름만으로도 그 의도를 파악 할 수 있어야 합니다. 즉, 명령 객체를 표현하기 위한 클래스의 이름과 명령 객체의 속성(field)명을 통해 의도와 명령을 처리하기 위해 필요한 데이터가 무엇 인지를 파악할 수 있어야 합니다.
 
