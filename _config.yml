@@ -1,7 +1,7 @@
 # External gems
 # See http://ixti.net/software/2013/01/28/using-jekyll-plugins-on-github-pages.html for making `jekyll archives` work.
 gems:
-  - jekyll-archives # Sorry, not GitHub pages friendly!
+  # - jekyll-archives # Sorry, not GitHub pages friendly!
   - jekyll-sitemap
   - jekyll-paginate
 
@@ -31,20 +31,20 @@ inter_post_navigation: false
 highlightjs_theme: "monokai-sublime"
 
 # Archive settings (see https://github.com/jekyll/jekyll-archives/)
-jekyll-archives:
-  enabled:
-    # - categories
-    - tags
-  layout: archive
-  permalinks:
-    # category: '/category/:name/'
-    tag: '/tag/:name/'
+# jekyll-archives:
+#   enabled:
+#     # - categories
+#     - tags
+#   layout: archive
+#   permalinks:
+#     # category: '/category/:name/'
+#     tag: '/tag/:name/'
 
 # Disqus comments
 disqus_shortname: ryukato
 
 # Google analytics
-# ga_tracking_id: "UA-XXXX-1"
+ga_tracking_id: "UA-111249281-1"
 
 # Category descriptions (for archive pages)
 descriptions:
@@ -193,6 +193,6 @@ protocols:
 
     twitter_image: "/assets/logo.png"
 
-    os_repo: "https://github.com/bencentra/centrarium.com"
+    os_repo: "https://github.com/ryukato/ryukato.github.io"
     os_rcs_type: "git"
-    os_src: "git@github.com:bencentra/centrarium.com.git"
+    os_src: "git@github.com:ryukato/ryukato.github.io.git"

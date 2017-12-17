@@ -8,6 +8,11 @@ layout: default
     <header class="post-header">
       <h1 class="title">{{ page.title }}</h1>
       <p class="info">by <strong>{{ page.author }}</strong></p>
+      {% if page.tags.size > 0 %}
+      <section class="tags">
+        <strong>Tags:</strong> {% for tag in page.tags %}<a href="/search/?tag={{ tag | escape }}">{{ tag }}</a>{% if forloop.last == false %},&nbsp;{% endif %}{% endfor %}
+      </section>
+      {% endif %}
     </header>
   </div>
 </div>
@@ -42,7 +47,6 @@ n='<'+i+' type="text/javascript" src="'+m+'"></'+i+'>';cl.writeln(n);
 <!-- {% if site.jekyll-archives %} -->
 {% if page.tags.size > 0 %}
 <section class="tags">
-  <!-- <strong>Tags:</strong> {% for tag in page.tags %}<a href="{{ site.baseurl }}/tag/{{ tag }}">{{ tag }}</a>{% if forloop.last == false %},&nbsp;{% endif %}{% endfor %} -->
   <strong>Tags:</strong> {% for tag in page.tags %} {{ tag }} {% if forloop.last == false %},&nbsp;{% endif %}{% endfor %}
 </section>
 {% endif %}
