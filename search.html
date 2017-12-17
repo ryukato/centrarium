@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Search results
+permalink: /search/
 ---
 {% comment %}
 This is the "search page". When a user hits `/search?category=foobar`, a little
@@ -65,7 +66,7 @@ escape names on this page match those in the URL.
   {% endfor %}
 </div>
 
-<div class="error">
+<div class="error" style="display:none;">
   <header>
     <h1>Error</h1>
   </header>

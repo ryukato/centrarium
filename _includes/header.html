@@ -1,22 +1,15 @@
 <header class="navigation" role="banner">
   <div class="navigation-wrapper">
     <a href="{{ site.baseurl }}/" class="logo">
-      {% if site.logo %}
-      <img src="{{ site.logo | prepend: site.baseurl }}" alt="{{ site.title }}">
-      {% else %}
-      <span>{{ site.title }}</span>
-      {% endif %}
+      <h1 class="title" style="color:black;">{{ site.title }}</h1>
     </a>
     <a href="javascript:void(0)" class="navigation-menu-button" id="js-mobile-menu">
       <i class="fa fa-bars"></i>
     </a>
     <nav role="navigation">
       <ul id="js-navigation-menu" class="navigation-menu show">
-        {% for page in site.pages %}
-          {% if page.title and page.main_nav != false %}
-          <li class="nav-link"><a href="{{ page.url | prepend: site.baseurl }}">{{ page.title }}</a>
-          {% endif %}
-        {% endfor %}
+        <li class="nav-link"><a href="/about/">About Me</a>
+        <li class="nav-link"><a href="/posts/">Posts</a>
       </ul>
     </nav>
   </div>
