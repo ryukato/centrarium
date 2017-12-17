@@ -1,0 +1,16 @@
+#markdown-toc::before {
+    content: "Contents";
+    font-weight: bold;
+}
+
+#markdown-toc {
+  background: none repeat scroll 0 0 #f9f9f9;
+  border: 1px solid #aaa;
+  display: table;
+  margin-left: 1em;
+  margin-bottom: 1em;
+  width: auto;
+  padding: 10px 20px;
+  float: right;
+  font-size: .8em;
+}
