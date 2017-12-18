@@ -2,7 +2,7 @@
 layout: post
 title: Jekyll 블로그에 태그 클라우드 만들기
 date: 2017-12-18 09:36:55
-tags: [Jekyll, tag-cloud, 태그-클라우드]
+tags: [Jekyll, tag-cloud]
 categories: [Jekyll]
 ---
 
