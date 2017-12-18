@@ -2,7 +2,7 @@
 layout: post
 title: Functional Programming Basic Concepts
 date: 2017-02-05 09:36:55
-tags: FP Functional-programming scala 스칼라 함수형언어
+tags: [FP, Functional-programming, Scala, 스칼라, 함수형언어]
 categories: [FP]
 ---
 

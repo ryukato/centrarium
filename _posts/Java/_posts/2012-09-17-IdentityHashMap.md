@@ -2,7 +2,7 @@
 layout: post
 title: IdentityHashMap
 date: 2013-04-03 16:57:29
-tags: Java IdentityHashMap 자바 아이덴티티해쉬맵
+tags: [Java, JCF, Map, IdentityHashMap]
 categories: [Java]
 ---
 

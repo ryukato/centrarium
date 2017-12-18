@@ -2,8 +2,8 @@
 layout: post
 title: Scala Tutorial 번역 - Partially Applied Function
 date: 2017-01-20 09:36:55
-tags: FP scala Scala-Tutorial-번역 스칼라 부분적용함수
-categories: [FP, Scala]
+tags: [FP, Scala, partially-applied-function]
+categories: [FP, Scala, 번역]
 ---
 
 * TOC

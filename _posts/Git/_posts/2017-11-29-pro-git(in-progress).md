@@ -2,8 +2,8 @@
 layout: post
 title: Pro git 번역중
 date: 2017-10-24 16:57:29
-tags: Pro-git git 번역
-categories: [Git]
+tags: [Pro-git, Git]
+categories: [Git, 번역]
 ---
 * TOC
 {:toc}

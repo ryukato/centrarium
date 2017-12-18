@@ -2,7 +2,7 @@
 layout: post
 title: Thread run 메서드 선언 시 유의사항, 그리고 Thread 죽이기
 date: 2014-12-24 09:36:55
-tags: Java thread kill-thread 자바 쓰레드 쓰레드-죽이기
+tags: [Java, thread, kill-thread]
 categories: [Java]
 ---
 

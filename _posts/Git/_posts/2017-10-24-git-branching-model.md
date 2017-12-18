@@ -2,7 +2,7 @@
 layout: post
 title: git-branching-model
 date: 2017-10-24 16:55:50
-tags: git branching 브랜칭
+tags: [Git, branching, 브랜칭]
 categories: [Git]
 ---
 

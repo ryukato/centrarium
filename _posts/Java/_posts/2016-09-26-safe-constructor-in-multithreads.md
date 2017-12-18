@@ -2,7 +2,7 @@
 layout: post
 title: 다중 쓰레드 환경에서 안전하게 생성자 작성하기
 date: 2016-09-26 16:57:29
-tags: Java Constructor Multi-threads 자바 쓰레드 안전한-생성자
+tags: [Java, Multi-threads, Constructor]
 categories: [Java]
 ---
 

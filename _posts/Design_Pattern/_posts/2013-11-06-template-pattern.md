@@ -2,7 +2,7 @@
 layout: post
 title: Template pattern
 date: 2013-07-05 09:36:55
-tags: Java Design-Pattern Template-pattern
+tags: [Java, Design-Pattern, Template-pattern]
 categories: [Design-pattern]
 ---
 

@@ -2,7 +2,7 @@
 layout: post
 title: Map interface and its implementations
 date: 2013-08-11 16:57:29
-tags: Java Map 자바 맵 맵구현체
+tags: [Java, JCF, Map]
 categories: [Java]
 ---
 

@@ -2,7 +2,7 @@
 layout: post
 title: Ordering elements of Set implementations - HashSet, TreeSet and LinkedHashSet
 date: 2012-12-26 09:36:55
-tags: JAVA HashSet TreeSet LinkedHashSet 자바 해쉬셋 트리셋 링크드해쉬셋
+tags: [Java, JCF, HashSet, TreeSet, LinkedHashSet]
 categories: [Java]
 ---
 * TOC

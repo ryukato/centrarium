@@ -2,7 +2,7 @@
 layout: post
 title: Singleton, MultiThreading and static method
 date: 2013-07-05 09:36:55
-tags: Java Design-Pattern Singleton MultiThreading
+tags: [Java, Design-Pattern, Singleton, MultiThreading]
 categories: [Design-pattern]
 ---
 * TOC

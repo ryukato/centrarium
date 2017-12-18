@@ -2,7 +2,7 @@
 layout: post
 title: Remove duplicated elements of linked-list
 date: 2013-11-02 09:36:55
-tags: JAVA LinkedList 자바 자바-퍼즐 링크드리스트
+tags: [Java, LinkedList, Java-puzzle]
 categories: [Java]
 ---
 

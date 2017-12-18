@@ -2,7 +2,7 @@
 layout: post
 title: 정렬순서가 다른 두 Set을 하나로 만들기
 date: 2013-08-11 16:57:29
-tags: Java Set Ordering 자바 셋 정렬
+tags: [Java, JCF, Set, Ordering]
 categories: [Java]
 ---
 

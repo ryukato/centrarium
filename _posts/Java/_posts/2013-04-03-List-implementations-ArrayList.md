@@ -2,7 +2,7 @@
 layout: post
 title: List implementations, ArrayList
 date: 2013-04-03 16:57:29
-tags: Java List ArrayList 자바 리스트 어래이리스트 어레이리스트
+tags: [Java, JCF, List, ArrayList]
 categories: [Java]
 ---
 * TOC
