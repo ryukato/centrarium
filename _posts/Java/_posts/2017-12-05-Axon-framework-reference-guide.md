@@ -339,8 +339,96 @@ CQRS 기반의 애플리케이션에서, 도메인 모델(에릭 에반스와 �
 ### Aggregate,
 Aggregate는 항상 일정한 상태로 유지되는 하나의 엔티티이거나 엔티티들의 그룹입니다. 최상위 Aggregate(Aggregate Root)는 aggregate 트리상의 최상위 객체이며, 일정한 상태를 유지하는 책임을 가지고 있습니다. 이런 점들이 Aggregate를 CQRS 기반의 애플리케이션에서 명령 모델을 구현하기 위한 가장 중요한 빌딩 블록으로 만듭니다.
 
+> Note  // TODO - 다듬어야 함.
+> "**Aggregate**"라는 용어는 도메인 주도 개발에서 다음과 같이 에릭 에반스가 정의한 aggregate을 말합니다.
+> "데이터 변경 목적을 위한 하나의 단위로 취급되는 연관된 객체들의 묶음으로, 외부의 참조는 최상위로 지정된 Aggregate내의 하나의 멤버로 제한된다. 일관성 규칙들의 집합은 Aggregate의 경계내에서 적용된다."
+
+예를 들어, 하나의 "연락처" aggregate은 "연락처"와 "주소"라는 두개의 엔티티를 포함할 수 있습니다. 전체 aggregate을 일관된 상태로 유지하기 위해선, 하나의 연락처로써 주소를 추가하는 행위는 연락처 엔티티를 통해서 이루어 져야 합니다. 이 경우, 연락처 엔티티를 최상위 aggregate로 지정 합니다.
+
+Axon에선, aggregate는 Aggregate 식별자에 의해 식별이 됩니다. 식별자의 유형에 제한은 없지만, 어떤 객체든 식별자로 사용할 있습니다. 하지만 좋은 식별자를 구현하기 위한 아래와 같은 몇가지 가이드 라인은 있습니다.
+* 다른 인스턴스와의 비교에서 정확안 동치성을 보장하기 위한 ```equals```와 ```hasCode```메서드를 구현해야 합니다.
+* 일관된 결과를 제공하는 ```toString()``` 메서드를 구현해야 합니다. 동치성 비교에 사용되는 항목들의 내용은 항상 일관되어야 하며, ```toString``` 메서드를 통해서도 일관된 내용이 표시되어야 합니다.
+* ```Serializable``` 인터페이스를 구현하도록 권장합니다.
+
+테스트 픽스쳐([테스팅 참조](// TODO link))는 이런 조건들을 검증하고 Aggregate가 호환되지 않는 식별자를 사용할 경우 테스트는 실패하게 됩니다. ```String```, ```UUID``` 그리고 숫자형태의 식별자를 사용한다면 아무런 문제가 되지 않습니다. 원시 타입의 변수는 늦은 초기화(lazy initialization)을 허용하지 않기때문에, 원시(primitive)타입의 값을 식별자로는 사용이 불가합니다. 일부 환경에서, Axon은 원시 타입 변수의 기본값을 식별자의 값으로 잘못 가정할 수 있습니다.
+
 > Note
-> // TODO
+> 순차적인 값을 사용하는 것보다 무작위로 생성된 값을 식별자로 사용하는 것이 모범 사례로 생각됩니다. 순차적인 값을 식별자로 사용하게 되면 애플리케이션의 규모 가변성을 크게 해치게 됩니다. 왜냐면 애플리케이션 인스턴스간 마지막으로 사용된 순차적인 값을 최신으로 유지를 해야 하기 때문입니다. 8.2 × 10^11^ UUID를 사용한다면, UUID의 값이 중복될 확률은 매우 작습니다. (중복될 확률: 10^-15^)
+> 기능적 식별자는 변경될 가능성이 있어, 적절하게 애플리케이션에 적용하는 것이 쉽지 않습니다. 따라서 기능적 식별자를 사용할 경우에는 조심해서 사용해야 합니다.
+
+### Aggregate implementations, Aggregate 구현체들
+특정 Aggregate은 Aggregate 루트(최상위 Aggregate)인 단일 엔티티를 통해서만 접근이 가능합니다. 보통 해당 엔티티의 이름은 Aggregate의 이름과 완전히 같습니다. 예를 들어, 주문 Aggregate은 주문 엔티티와 주문 상품 항목 엔티티로 구성될 수 있으며, 주문과 주문 상품 함께 Aggregate을 구성하게 됩니다.
+
+Aggregate은 일반 객체이며, 상태와 상태를 변경할 수 있는 메서드를 포함합니다. 비록 CQRS 원칙을 완벽히 따르는 것은 아닐지라도, setter(accesor) 메서드를 통해 aggregate의 상태를 변경하는 것은 가능합니다.
+
+Aggregate 루트 객체는 Aggregate 식별자를 포함하는 항목을 반드시 선언해야 합니다. 이 식별자는 최소한 첫번째 이번트가 발생되었을때 초기화 되어야 합니다. ```@AggregateIdentifier``` 애노테이션을 반드시 해당 식별자에 사용해야 합니다. JPA와 JPA 애노테이션들을 aggregate에 사용한다면, ```@Id```애노테이션을 사용하여 식별자를 나타낼 수 있습니다.
+
+Aggregate은 게시(publication)할 이벤트를 등록하기 위해 ```AggregateLifeCycle.apply()```메서드를 사용할 수 도 있습니다. EventMessage로 메세지들을 감싸는  ```EventBus```와는 다르게, ```AggregateLifeCycle.apply()``` 메서드는 페이로드(payload) 객체를 바로 사용할 수 있습니다. 다음의 예제코드는 aggregate에 JPA, JPA 애노테이션의 사용과 ```AggregateLifeCycle.apply()```메서드의 사용 예 입니다.
+
+```
+@Entity // JPA 엔티티
+public class MyAggregate {
+
+    @Id // JPA @Id 애노테이션을 사용할 경우, @AggregateIdentifier 애노테이션은 필요하지 않습니다.
+    private String id;
+
+    // 상태를 나타내는 멤버 필드...
+
+    @CommandHandler
+    public MyAggregate(CreateMyAggregateCommand command) {
+        // ... 상태 변경
+        apply(new MyAggregateCreatedEvent(...));
+    }
+
+    // JPA가 필요롤 하는 생성자
+    protected MyAggregate() {
+    }
+}
+```
+Aggregate내의 엔티티는 ```@EventHandler``` 애노테이션이 사용된 메서드를 통해 Aggregate가 게시하는 이벤트들을 수신할 수 있습니다. 외부 핸들러로 전파되기 전에, 해당 메서드들은 이벤트가 게시되었을때 호출이 됩니다.
+
+
+// TODO - 제목 다음어야함.
+### Event sourced aggregates, 이벤트로 기반 aggregates
+Aggregate의 현재 상태를 저장하는 것 외에, 이미 게기된 지난 이벤트들을 가지고 Aggregate의 상태를 복원한는 것 또한 가능합니다. 이것을 가능하게 하기 위해선, 모든 상태변경은 이벤트로 표현이 되어야 합니다.
+
+가장 중요한 부분은, 다른 aggregate들과 마찮가지로 식별자를 가져야 하고 ```apply```메서드를 통해 이벤트를 게시하는 점에서 이벤트로 기반 Aggregate들은 '일반' aggregate들과 유사합니다. 그렇지만 이벤트 기반 Aggregate들의 상태 변경(예를 들어 필드 값의 변경)과 식별값의 설정은 전적으로 ```@EventSourcingHandler``` 애노테이션이 사용된 메서드를 통해서만 적용이 되어야 합니다.
+
+Aggregate가 게시하는 가장 첫번째 이벤트는 보통 생성 이벤트이며, Aggregate가 게시한 가장 첫번째 이벤트를 처리할 ```@EventSourcingHandler``` 메서드를 통해 반드시 Aggregate의 식별값을 설정해야 합니다.
+
+이벤트 기반 Aggregate의 Aggregate 루트는 인자를 가지지 않는 기본 생성자를 반드시 포함해야 합니다. Axon Framework은 지난 이벤트를 사용하여 Aggregate를 초기화하기 전에, 기본 생성자를 사용하여 기본적인 Aggregate 인스턴스를 생성합니다. Aggregate에 기본 생성자가 없는 경우, Aggregate 로딩 시 예외가 발생하게 됩니다.
+
+```
+public class MyAggregateRoot {
+
+    @AggregateIdentifier
+    private String aggregateIdentifier;
+
+    // 상태를 나타내는 멤버 필드...
+
+    @CommandHandler
+    public MyAggregateRoot(CreateMyAggregate cmd) {
+        apply(new MyAggregateCreatedEvent(cmd.getId()));
+    }
+
+    // 복원을 위해 필요한 기본 생성자
+    protected MyAggregateRoot() {
+    }
+
+    @EventSourcingHandler
+    private void handleMyAggregateCreatedEvent(MyAggregateCreatedEvent event) {
+        // 식별자 값은 항상 올바르게 초기화 되어야 합니다.
+        this.aggregateIdentifier = event.getMyAggregateIdentifier();
+
+        // ... 상태 변경
+    }
+}
+```
+
+```@EventSourcingHandler``` 애노테이션이 달린 메서드들은 특정 규칙에 따라 호출됩니다. 이 규칙들은 [애노테이션 기반 이벤트 처리자](// TODO link)에서 상세히 설명할 ```@EventHandler``` 애노테이션이 달린 메서드들에 적용되는 규칙과 동일합니다.
+
+
+
 
 
 
