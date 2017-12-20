@@ -48,8 +48,47 @@ OOP와 같이 Stateful한 언어들로 동시성을 제어하는 것은 어려�
 하지만 **FP에서는 가변(Stateful, mutable)한 것을 허용하지 않는다.** 즉, 객체 혹은 값이 한번 설정되면 절대 바꿀 수 없다.
 
 ### Monads
+Monads, 생소한 용어, 개념이다. Monads는 일종의 컨테이너라고 생각할 수 도 있다. 복잡한 설명보다 아래의 코드로 대충 감을 잡는 것이 좋을 것이다.
+
+```
+def someComputation(): Option[String] = ...
+val myPossibleString = someComputation()
+```
+
+위의 코드를 보면 someComputation의 반환 타입은 Option[String]으로 되어있다. 이는 결과가 있을 수도, 없을 수도 있다는 의미인데, NullPointerException을 유발할 수 있는 Null을 반환하는 것이 아닌 것이다.
+someComputation이 반환하는 Option[String]은 Monads라고 할 수 있다. 왜냐면 someComputation이 반환하는 값이 있을 경우, Option은 내부에 String 타입의 값을 포함하는 컨테이너 역활을 하기 때문이다.
+
+아래의 자바 코드와 비교해보자
+
+```
+String myPossibleString = someComputation();
+
+if(myPossibleString == null){
+    //do something
+}
+return myPossibleString.toUpper();
+```
+위의 자바코드를 보면 someComputation이 반환하는 값에 대한 Null 확인을 하고 있다. 그런데 위의 코드를 아래와 같이 함수형으로 재 작성할 수 있다.
+
+```
+someComputation().map(_.toUpper)
+```
+
+Monads로 매핑을 하기 위해선, 아래와 같이 Some 혹은 None으로 결과값을 반환해야 한다.
+
+```
+Some("test")
+//or
+None
+```
+Monads에 대한 자세한 설명은 아래의 동영상을 통해 확인 할 수 있다.
+Brian Beckman’s Monad
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/ZhuHCtR3xq8" frameborder="0" allowfullscreen=""></iframe>
 
 
 ### References
 * [functional-programming-pure-functions/](https://www.sitepoint.com/functional-programming-pure-functions/)
 * [Functional-Programming-Concepts-Idioms-and-Philosophy/](https://hkupty.github.io/2016/Functional-Programming-Concepts-Idioms-and-Philosophy/)
+* [referential-transparency-and-the-true-meaning-of](http://monospacedmonologues.com/post/138204666541/referential-transparency-and-the-true-meaning-of)
+* [functional_programming learning](https://www.tutorialspoint.com/functional_programming/index.htm)
