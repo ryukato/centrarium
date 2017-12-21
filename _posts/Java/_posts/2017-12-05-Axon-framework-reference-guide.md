@@ -467,7 +467,136 @@ Aggregate에 명령 처리자를 정의하기 위해선, 단지 명령 처리를
 * ```@MetaDataValue``` 애노테이션과 애노테이션에 명시된 키에 해당하는 메타 데이터 값을 인자로 받을 수 있습니다. (예 ```@MetaDataValue("userId") String id")```. ```@MetaDataValue``` 애노테이션에 ```required``` 속성을 기본값인 ```false```로 주게 되면,  없는 메타 데이터를 ```null```로 처리하여 넘겨줍니다. 반면 ```required```가 ```true```이고 해당 메타 데이터가 존재하지 않으면, 해당 메서드는 호출되지 않습니다. 
 * ```MetaData``` 타입의 매개변수는 주입된 ```CommandMessage```의 전체 ```MetaData```를 포함하게 됩니다. 
 * ```UnitOfWork``` 타입의 매개변수는 현재의 작업 단위(Unit of Work) 객체를 가지게 됩니다. 넘겨받은 ```UnitOfWork``` 매개변수를 통해, 명령 처리자는 작업 단위 객체의 특정 단계에서 실행되어야 할 작업을 등록할 수 있거나 이미 등록된 자원을 사용할 수 있습니다. 
-* ```Message``` 혹은 ```CommandMessage``` 타입의 매개변수는 완전한 메세지
+* ```Message``` 혹은 ```CommandMessage``` 타입의 매개변수는 페이로드와 메타 데이터를 포함한 완전한 메세지를 가지게 됩니다. 이를 통해 메타 데이터의 필드 혹은 래핑 메세지의 다른 속성들을 사용할 수 있습니다.
+
+Aggregate 타입의 명령 메세지를 처리해야하는 인스턴스를 알기 위해서, 아래의 예제 코드처럼 명령 객체내의 Aggregate 식별자를 포함하는 속성에 반드시 ```@TargetAggregateIdentifier``` 애노테이션을 붙여야 합니다. ```@TargetAggregateIdentifier``` 애노테이셔은 필드나 속성에 접근 하는 메서드(예, getter 메서드)에 사용해야 합니다.
+
+```
+public class UpdateAccountCommand<ID> {
+    @TargetAggregateIdentifier
+    private final ID id;
+
+    UpdateAccountCommand(ID id) {
+        this.id = id;
+    }
+
+    public ID identifier() {
+        return id;
+    }
+}
+```
+Aggregate 인스턴스를 생성하는 명령어 객체들은 대상 aggregate 식별자를 식별할 필요는 없지만, 그래도 해당 명령어 객체들에도 ```@TargetAggregateIdentifier```을 사용하는 것을 권장합니다.
+
+명령을 분배하기 위한 또 다른 메커니즘을 사용할려면, ```CommandTargetResolver```인터페이스의 구현체를 직접 작성하면 됩니다. 직접 구현한 구현체는 주어진 명령 객체에 기반한 Aggregate 식별자와 기대 버전을 반환해야 합니다.
+
+> Note
+> Aggregate 생성자에 ```@CommandHandler``` 애노테이션을 사용하면, 해당 명령은 aggregate의 새로운 인스턴스를 생성하고 저장소에 생성된 aggregate를 저장합니다. 이러한 명령들은 특정 aggregate 인스턴스를 대상으로 할 필요가 없습니다. 그러므로, 이러한 명령들은 ```@TargetAggregateIdentifier``` 혹은  ```@TargetAggregateVersion``` 애노테이션을 필요로 하지 않으며, 또한 ```CommandTargetResolver```가 이런 명령들을 처리할 필요도 없습니다.  
+> 
+> 명령으로부터 aggregate 인스턴스를 생성할때, 해당 명령 처리가 정상적으로 수행되면 명령에 대한 콜백에 aggregate 식별자를 전달합니다.
+
+```
+“public class MyAggregate {
+
+    @AggregateIdentifier
+    private String id;
+
+    @CommandHandler
+    public MyAggregate(CreateMyAggregateCommand command) {
+        apply(new MyAggregateCreatedEvent(IdentifierFactory.getInstance().generateIdentifier()));
+    }
+
+    // Axon에서의 처리를 위한 기본 생성자.
+    MyAggregate() {
+    }
+
+    @CommandHandler
+    public void doSomething(DoSomethingCommand command) {
+        // 해당 명령에 대한 처리 수행
+    }
+
+    // 간단한 예제코드이기 때문에, MyAggregateCreatedEvent를 수신하여 id값을 설정하는 코드는 생략합니다.
+}
+
+public class DoSomethingCommand {
+
+    @TargetAggregateIdentifier
+    private String aggregateId;
+
+    // 간단한 예제코드이므로, 이하 코드는 생략합니다.
+}
+
+```
+
+Aggregate 설정을 위한 Axon Configuration API 사용에 대한 예제 코드입니다.
+
+```
+Configurer configurer = ...
+// 기본 사항 사용을 위함.
+//configurer.configureAggregate(MyAggregate.class);
+
+// 사용자 정의 허용
+configurer.configureAggregate(
+	AggregateConfigurer
+	.defaultConfiguration(MyAggregate.class)
+	.configurerCommandTargetResolver(c -> new CustomCommandTargetResolver())
+);
+```
+
+```@CommandHandler``` 애노테이션은 Aggregate 루트에만 사용할 수 있는 것은 아닙니다. 모든 명령 처리자들을 Aggregate 루트에 정의하게 되면 너무 많은 메서드들이 생길 수 있으며, 그 중 많은 수의 메서드는 단순히 하위 엔티티들 중 하나로 호출을 전달합니다. 이런 것이 문제가 된다면, ```@CommandHandler``` 애노테이션을 하위의 엔티티들 중 하나의 엔티티의 메서드에 선언하여 사용할 수 있습니다. Axon이 ```@CommandHandler``` 애노테이션이 사용된 메서드를 찾도록 하기 위해서 해당 하위 엔티티를 aggregate 루트의 속성 필드에 반드시 ```@AggregateMember``` 애노테이션을 사용해야 합니다. ```@AggregateMember``` 애노테이션이 사용된 필드만이 명령 처리자를 위한 검사 대상이 되기 때문입니다. 해당 엔티티에 대한 명령을 수신했을때, 만약 해당 엔티티 필드의 값이 ```null```이라면 예외가 발생하게 됩니다.
+
+```
+public class MyAggregate {
+	@AggregateIdentifier
+	private String id;
+	
+	@AggregateMember
+	private MyEntity entity;
+	
+	@CommandHandler
+	public MyAggregate(CreateMyAggregateCommand command) {
+		apply(new MyAggregateCreatedEvent(...);
+	}
+	
+	// Axon에서의 처리를 위한 기본 생성자.
+	MyAggregate() {}
+	
+	@CommandHandler
+	public void doSomething(DoSomethingCommand command) {
+		// 해당 명령에 대한 처리 수행
+	}
+	
+	
+    // 간단한 예제코드이기 때문에, MyAggregateCreatedEvent를 수신하여 id값을 설정하는 코드는 생략합니다.
+    // 그리고 생애주기 상의 특정 지점에서, DoSomethingInEntityCommand commands를 처리하기 위해 "entity" 필드에 대한 값을 설정을 반드시 해주어야 합니다.
+}
+
+public class MyEntity {
+	@CommandHandler
+	public void handleSomeCommand(DoSomethingInEntityCommand command) {
+		// entity에 대한 DoSomethingInEntityCommand 처리 수행 
+	}
+}
+```
+
+>  Note
+>  Aggregate내에 개별 명령에 대한 처리자는 오로지 하나만 존재해야 합니다. 즉, 동일한 타입의 명령을 처리할 수 있는 다수의 엔티티(루트, 루트가 아닌 엔티티 모두 포함)에 ```@CommandHandler```를 사용할 수 없습니다. 만약 조건에 따라서 명령을 특정 엔티티로 분배해야 한다면, 이런 엔티티들의 부모 객체가 해당 명령을 처리해야 하고 조건에 따라 해당 명령을 전달해야 합니다.
+> 
+> 실행 시점의 필드 타입과 선언 시점의 필드 타입이 반드시 일치해야 하는 것은 아니지만, ```@AggregateMember```로 선언된 필드의 타입으로 ```@CommandHandler```를 적용합니다.
+
+엔티티들을 포함하는 컬렉션(Collection)과 맵(Map) 타입의 필드에도 ```@AggregateMember``` 애노테이션을 사용할 수 있습니다. 맵을 경우 값들에는 엔티티들을 포함하도록 해야 하고 키는 값에 대한 참조로 사용될 값을 가지면 됩니다.
+
+명령을 정확한 인스턴스로 분배해야 하기때문에, 이런 인스턴스들은 반드시 정확하게 식별이 되어야 합니다. ```@EntityId``` 애노테이션을 인스턴스들의 "id" 필드에 반드시 사용해야 합니다.  메세지를 받아야할 엔티티를 찾기 위한 용도로 사용되는 명령의 속성은 기본적으로 ```@EntityId``` 애노테이션이 사용된 필드의 이름으로 지정이 됩니다. 예를 들어, "myEntityId"필드에 ```@EntityId``` 애노테이션을 사용했을 때, 해당 명령은 반드시 동일한 이름의 속성을 가지고 있어야 합니다. 다시 말하면, 명령 객체는 ```getMyEntityId``` 혹은 ```myEntityId()``` 메서드들 중 하나를 반드시 포함해야 합니다. 만약 필드 명과 분배 기준이 되는 속성이 다르다면, ```@EntityId(routingKey = "customRoutingProperty" )```와 같이 ```routingKey```를 사용하여 명시적으로 분배 기준이 되는 항목명을 지정해야 합니다.
+
+```@AggregateMember``` 애노테이션이 사용된 컬렉션이나 맵에서 엔티티가 발견되지 않는다면, aggregate이 해당 시점에 수신된 명령을 처리할 수 없기 때문에  ```IllegalStateException```이 발생하게 됩니다. 
+
+> Note
+> ```@AggregateMember``` 애노테이션이 사용된 컬렉션이나 맵 타입의 필드를 선언할 때, 내부 요소의 타입을 식별할 수 있게 해주는 제너릭을 사용해야 합니다. 만약 제너릭을 사용할 수 없다면, ```@AggregateMember``` 애노테이션의 속성인 ```entityType```을 사용하여 엔티티의 타입을 명시적으로 선언해 주어야 합니다.
+ 
+### External Command Handlers, 외부 명령 처리자
+// TODO
+
+
+
 
 
 
