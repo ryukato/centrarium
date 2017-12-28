@@ -800,9 +800,87 @@ Saga내에서의 이벤트 처리는 보통의 이벤트 처리자와 거의 동
 
  때때로, 연결하고자 하는 속성의 이름이 사용하고자 하는 연결 이름이 아닐 때가 있습니다. 예를 들어, 구매 주문에 대한 판매 주문을 처리하기 위한 Saga를 정의해야 한다면, "buyOrderId"와 "sellOrderId"를 가지는 트랜잭션 객체를 정의할 수 있습니다. Saga를 "orderId"로 연결하고자 한다면, ```@SagaEventHandler(associationProperty="sellOrderId", keyName="orderId")```와 같이 ```@SagaEventHandler``` 애노테이션에 다른 키 이름을 정의 할 수 있습니다.
 
- ### Managing associations, 연결 관리 하기
- // TODO - continue
+### Managing associations, 연결 관리 하기
+Saga를 통해 주문, 배송 그리고 송장 등과 같은 다수의 도메인 개념에 걸쳐 발생하는 트랜잭션을 관리할때, Saga를 해당 도메인 객체의 인스턴스와 연결을 시켜줘야 합니다. Saga와 도메인 객체의 인스턴스간 연결은 해당 주문 그리고 배송 등과 같은 연결 유형을 식별하기 위한 **키**와 도메인 객체의 식별자를 나타내는 **값**이 필요합니다. 
 
+위와 같은 Saga와 도메인 객체는다양한 방법으로 연결할 수 있습니다. 우선, ```@StartSaga``` 애노테이션이 사용된 이벤트 처리자를 호출하여 새로운 Saga가 생성되면, 생성된 Saga는 ```@SagaEventHandler``` 애노테이션에 명시된 속성과 자동으로 연결이 됩니다. 다른 연결은 ```SafaLifecycle.associateWith(String key, String/Number value)``` 메서드를 사용하여 생성할 수 있습니다. 생성한 특정 연결을 삭제할려면, ```SagaLifecycle.removeAssociationWith(String key, String/Number value)``` 메서드를 사용하세요.
+
+주문과 관련된 트랜잭션 처리를 위해 생성된 Saga를 생각해보세요. 주문 생성 이벤트를 처리하는 메서드에 ```@StartSaga``` 애노테이션이 사용되었기 때문에, 해당 Saga는 자동적으로 주문과 연결이 됩니다. 해당 Saga는 주문에 대한 송장을 생성하고 주문에 대한 배송을 준비 시키도록 합니다. 배송이 완료되고 송장에 대한 지불이 완료되면, 트랜잭션과 Saga는 종료됩니다. 
+
+위에서 설명한 Saga에 대한 코드는 아래와 같습니다. 
+
+```
+public class OrderManagementSaga {
+	private boolean paid = false;
+	private boolean delivered = false;
+	
+	@Inject
+	private transient CommandGateway commandGateway;
+	
+	@StartSaga
+	@SagaEventHandler(associationProperty = "orderId")
+	public void handle(OrderCreatedEvent event) {
+		// shipmentId와 invoiceId를 생성합니다.
+		ShippingId shipmentId = createShipmentId();
+		InvoiceId invoiceId = createInvoiceId();
+		
+		// 명령을 전송하기 전에 shipmentId와 invoiceId를 Saga와 연결합니다.
+		
+		associateWith("shipmentId", shipmentId);
+		associateWith("invoiceId", invoiceId);
+		
+		commandGateway.send(new PrepareShippingCommand(...));
+		commandGateway.send(new CreateInvoiceCommand(...));
+	}
+	
+	@SagaEventHandler(associationProperty = "shipmentId")
+	public void handle(ShippingArrivedEvent event) {
+		delivered = true;
+		if (paid) {
+			end();
+		}
+	}
+	
+	@SagaEventHandler(associationProperty = "invoiceId")
+	public void handle(InvoicePaidEvent event) {
+		paid = true;
+		if (delivered) {
+			end();
+		}
+	}
+	
+	// ...
+
+}
+
+```
+
+// TODO - 클라이언트가 의미하는 바를 좀 더 구체적으로
+클라이언트들이 식별자를 생성하게 함으로써, 요청-응답 형태의 명령 없이도 Saga와 도메인 객체들을 쉽게 연결할 수 있습니다. 명령을 보내기 전에, 도메인 객체들과 이벤트를 연결합니다. 이렇게하면, 명령의 일부로 생성되는 이벤트들을 감지할 수 있습니다. 송장에 대한 지불과 배송이 완료되면 Saga를 종료합니다. 
+
+### Keeping track of Deadlines, 마감 시한을 지키도록 하기
+이벤트가 발생하였을때, Saga를 통해 쉽게 조치를 취할 수 있습니다. 해당 이벤트가 Saga에게 전달되기 때문입니다. 하지만 아무것도 일어나지 않았을때 Saga를 통해 조치를 취하려면 어떻게 해야 할까요? 이를 위해 마감 시한(deadline)을 사용합니다. 송장의 예에서, 신용 카드 지불은 수초안에 결제가 이루어지는 반면, 송장은 보통 수주가 걸립니다. 
+
+Axon은 ```EventScheduler```를 제공하여 이벤트를 발생 시킬 수 있도록 합니다. 송장의 예에서, 송장이 30일 이내에 지불이 완료 되기를 원한다면, Saga를 통해  ```CreateInvoiceCommand```를 보낸 이후에 ```InvoicePaymentDeadlineExpiredEvent```를 30일이 되는 시점에 발생 시킬 수 있습니다. 이벤트 스케쥴러(EventScheduler)는 특정 이벤트를 발생 시키도록 예정(schedule)한 후, ```ScheduleToken```을 반환 합니다. 송장에 대한 지불이 이루어 지면, 반환된 ```ScheduleToken```을 통해 해당 스케쥴을 취소할 수 있습니다. 
+
+Axon은 두개의 ```EventScheduler```구현체들을 제공합니다. 하나는 순수 Java로 작성된 것이고 다른 하나는 backing scheduling 메커니즘인 Quartz2를 사용한 구현체 입니다. 
+
+```EventScheduler```의 순수 자바 구현체는 이벤트 게시 일정을 세우기 위해 ```ScheduledExecutorService```를 사용합니다. 이 스케쥴러는 매우 안정적인 타이밍을 제공하지만, 메모리 기반의 구현을 제공합니다. 따라서 JVM이 종료되면, 모든 스케쥴이 사라지게 됩니다. 따라서 긴 기간에 걸친 스케쥴을 위해서는 적당하지 않습니다. 
+
+```SimpleEventScheduler```는 ```EventBus```와 ```SchedulingExecutorService```를 함께 설정해 주어야 합니다. (```ScheduledExecutorService``` 생성 시 필요한 헬퍼 메서드는 [```java.util.concurrent.Executors```](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Executors.html)를 참고하세요.)
+
+```QuartzEventScheduler```는 보다 더 안정적이고 엔터프라이즈에 적당한 구현체입니다. Quartz를 기반 스케쥴링 메커니즘으로 사용하면, 영속화, 클러스터링 그리고 실패(misfire) 관리와 같은 보다 더 강력한 기능들을 제공합니다. 해당 기능들을 사용하여 이벤트 게시를 확실히 보장할 수 있습니다. 조금 늦을 수는 있지만 결국 이벤트를 게시할 수 있습니다. 
+
+```QuartzEventScheduler```는 Quartz ```Scheduler```와 ```EventBus```를 필요로 합니다. 선택적으로 기본적으로 "AxonFramework-Events"로 설정되어 있는 Quartz job들이 스케쥴되어 있는 그룹의 이름을 설정할 수 있습니다. 
+
+하나 혹은 그 이상의 콤포넌트들은 스케쥴되어 있는 이벤트들을 수신할 수 있습니다. 이 콤포넌트들은 콤포넌트를 호출하는 쓰레드에 묶여 있는 트랜잭션에 의존할 수 있습니다. 스케쥴된 이벤트들은 ```EventScheduler```를 관리하는 쓰레드에 의해 게시됩니다. 이런 쓰레드들 상의 트랜잭션을 관리하기 위해서, ```TransactionManager``` 혹은 작업 단위(Unit of Work)에 묶인 트랜잭션을 생성하는  ```UnitOfWorkFactory```를 설정할 수 있습니다. 
+
+> Note
+> 스프링을 사용한다면, ```QuartzEventSchedulerFactoryBean``` 혹은  ```SimpleEventSchedulerFactoryBean```을 사용하여 보다 쉽게 설정을 할 수 있습니다. 
+> ```QuartzEventSchedulerFactoryBean``` 그리고   ```SimpleEventSchedulerFactoryBean```에 스프링의 트랜잭션 인프라의 핵심 인터페이스인  PlatformTransactionManager를 직접 설정할 수 있습니다. 
+
+### Injecting Resources, 자원 주입하기
+// TODO - continue
 
 
 ## Glossary
@@ -836,3 +914,6 @@ DDD model은 domain,
 
 ### ACID
 ACID는 Atomicity, Consistency, Isolation, Durability의 첫글짜를 딴 줄임말로 데이터베이스 트랜잭션이 안정하게 수행된다는 것을 보장하기 위한 성질을 의미한다. 데이터베이스에서 데이터에 대한 논리적 실행단계를 트랜잭션이라고 한다. [자세히](https://ko.wikipedia.org/wiki/ACID)
+
+### backing scheduling
+// TODO - search
