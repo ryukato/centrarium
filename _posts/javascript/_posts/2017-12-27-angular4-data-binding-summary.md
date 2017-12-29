@@ -18,12 +18,14 @@ categories: [JavaScript, Angular4]
 **양방향** 데이터 바인딩과는 달리 **단방향** 데이터 바인딩은 바인딩 방식에 따라 아래와 같이, 삽입식, 프로퍼티 그리고 이벤트 바인딩으로 나눌 수 있다.
 
 ### 삽입식 바인딩
-아래의 코드와 같이 콤포넌트의 속성을 ```{{}}``` 로 감싸, 뷰에 선언한 방식이 삽입식 바인딩이다. 콤포넌트의 상태값이 변경하게 되면 자동으로 뷰에 표시되는 값도 변경이 된다.
+아래의 코드와 같이 콤포넌트의 속성을 {% raw %} ```{{ }}```{% endraw %} 로 감싸, 뷰에 선언한 방식이 삽입식 바인딩이다. 콤포넌트의 상태값이 변경하게 되면 자동으로 뷰에 표시되는 값도 변경이 된다.
 
 ###### sample-component.html
+{% raw %}
 ```
-<span>{{name}}</span>
+<span>{{ name }}</span>
 ```
+{% endraw %}
 
 ###### sample-component.ts
 
@@ -96,7 +98,7 @@ import { Component } from '@angular/core';
 })
 export class SampleComponent {
   name: string = '';
-  
+
   handleClick(name: string) {
     this.name = name;
   }
