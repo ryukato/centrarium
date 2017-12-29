@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Axon framework reference guide 번역 중.(on going)
-date: 2017-12-29 09:36:55
+date: 2017-12-05 09:36:55
 tags: [Java, Axon, Axon-framework, CQRS]
 categories: [Java, Axon, CQRS]
 ---
@@ -801,38 +801,38 @@ Saga내에서의 이벤트 처리는 보통의 이벤트 처리자와 거의 동
  때때로, 연결하고자 하는 속성의 이름이 사용하고자 하는 연결 이름이 아닐 때가 있습니다. 예를 들어, 구매 주문에 대한 판매 주문을 처리하기 위한 Saga를 정의해야 한다면, "buyOrderId"와 "sellOrderId"를 가지는 트랜잭션 객체를 정의할 수 있습니다. Saga를 "orderId"로 연결하고자 한다면, ```@SagaEventHandler(associationProperty="sellOrderId", keyName="orderId")```와 같이 ```@SagaEventHandler``` 애노테이션에 다른 키 이름을 정의 할 수 있습니다.
 
 #### Managing associations, 연결 관리 하기
-Saga를 통해 주문, 배송 그리고 송장 등과 같은 다수의 도메인 개념에 걸쳐 발생하는 트랜잭션을 관리할때, Saga를 해당 도메인 객체의 인스턴스와 연결을 시켜줘야 합니다. Saga와 도메인 객체의 인스턴스간 연결은 해당 주문 그리고 배송 등과 같은 연결 유형을 식별하기 위한 **키**와 도메인 객체의 식별자를 나타내는 **값**이 필요합니다.
+Saga를 통해 주문, 배송 그리고 송장 등과 같은 다수의 도메인 개념에 걸쳐 발생하는 트랜잭션을 관리할때, Saga를 해당 도메인 객체의 인스턴스와 연결을 시켜줘야 합니다. Saga와 도메인 객체의 인스턴스간 연결은 해당 주문 그리고 배송 등과 같은 연결 유형을 식별하기 위한 **키**와 도메인 객체의 식별자를 나타내는 **값**이 필요합니다. 
 
 위와 같은 Saga와 도메인 객체는다양한 방법으로 연결할 수 있습니다. 우선, ```@StartSaga``` 애노테이션이 사용된 이벤트 처리자를 호출하여 새로운 Saga가 생성되면, 생성된 Saga는 ```@SagaEventHandler``` 애노테이션에 명시된 속성과 자동으로 연결이 됩니다. 다른 연결은 ```SafaLifecycle.associateWith(String key, String/Number value)``` 메서드를 사용하여 생성할 수 있습니다. 생성한 특정 연결을 삭제할려면, ```SagaLifecycle.removeAssociationWith(String key, String/Number value)``` 메서드를 사용하세요.
 
-주문과 관련된 트랜잭션 처리를 위해 생성된 Saga를 생각해보세요. 주문 생성 이벤트를 처리하는 메서드에 ```@StartSaga``` 애노테이션이 사용되었기 때문에, 해당 Saga는 자동적으로 주문과 연결이 됩니다. 해당 Saga는 주문에 대한 송장을 생성하고 주문에 대한 배송을 준비 시키도록 합니다. 배송이 완료되고 송장에 대한 지불이 완료되면, 트랜잭션과 Saga는 종료됩니다.
+주문과 관련된 트랜잭션 처리를 위해 생성된 Saga를 생각해보세요. 주문 생성 이벤트를 처리하는 메서드에 ```@StartSaga``` 애노테이션이 사용되었기 때문에, 해당 Saga는 자동적으로 주문과 연결이 됩니다. 해당 Saga는 주문에 대한 송장을 생성하고 주문에 대한 배송을 준비 시키도록 합니다. 배송이 완료되고 송장에 대한 지불이 완료되면, 트랜잭션과 Saga는 종료됩니다. 
 
-위에서 설명한 Saga에 대한 코드는 아래와 같습니다.
+위에서 설명한 Saga에 대한 코드는 아래와 같습니다. 
 
 ```
 public class OrderManagementSaga {
 	private boolean paid = false;
 	private boolean delivered = false;
-
+	
 	@Inject
 	private transient CommandGateway commandGateway;
-
+	
 	@StartSaga
 	@SagaEventHandler(associationProperty = "orderId")
 	public void handle(OrderCreatedEvent event) {
 		// shipmentId와 invoiceId를 생성합니다.
 		ShippingId shipmentId = createShipmentId();
 		InvoiceId invoiceId = createInvoiceId();
-
+		
 		// 명령을 전송하기 전에 shipmentId와 invoiceId를 Saga와 연결합니다.
-
+		
 		associateWith("shipmentId", shipmentId);
 		associateWith("invoiceId", invoiceId);
-
+		
 		commandGateway.send(new PrepareShippingCommand(...));
 		commandGateway.send(new CreateInvoiceCommand(...));
 	}
-
+	
 	@SagaEventHandler(associationProperty = "shipmentId")
 	public void handle(ShippingArrivedEvent event) {
 		delivered = true;
@@ -840,7 +840,7 @@ public class OrderManagementSaga {
 			end();
 		}
 	}
-
+	
 	@SagaEventHandler(associationProperty = "invoiceId")
 	public void handle(InvoicePaidEvent event) {
 		paid = true;
@@ -848,7 +848,7 @@ public class OrderManagementSaga {
 			end();
 		}
 	}
-
+	
 	// ...
 
 }
@@ -856,60 +856,60 @@ public class OrderManagementSaga {
 ```
 
 // TODO - 클라이언트가 의미하는 바를 좀 더 구체적으로
-클라이언트들이 식별자를 생성하게 함으로써, 요청-응답 형태의 명령 없이도 Saga와 도메인 객체들을 쉽게 연결할 수 있습니다. 명령을 보내기 전에, 도메인 객체들과 이벤트를 연결합니다. 이렇게하면, 명령의 일부로 생성되는 이벤트들을 감지할 수 있습니다. 송장에 대한 지불과 배송이 완료되면 Saga를 종료합니다.
+클라이언트들이 식별자를 생성하게 함으로써, 요청-응답 형태의 명령 없이도 Saga와 도메인 객체들을 쉽게 연결할 수 있습니다. 명령을 보내기 전에, 도메인 객체들과 이벤트를 연결합니다. 이렇게하면, 명령의 일부로 생성되는 이벤트들을 감지할 수 있습니다. 송장에 대한 지불과 배송이 완료되면 Saga를 종료합니다. 
 
 #### Keeping track of Deadlines, 마감 시한을 지키도록 하기
-이벤트가 발생하였을때, Saga를 통해 쉽게 조치를 취할 수 있습니다. 해당 이벤트가 Saga에게 전달되기 때문입니다. 하지만 아무것도 일어나지 않았을때 Saga를 통해 조치를 취하려면 어떻게 해야 할까요? 이를 위해 마감 시한(deadline)을 사용합니다. 송장의 예에서, 신용 카드 지불은 수초안에 결제가 이루어지는 반면, 송장은 보통 수주가 걸립니다.
+이벤트가 발생하였을때, Saga를 통해 쉽게 조치를 취할 수 있습니다. 해당 이벤트가 Saga에게 전달되기 때문입니다. 하지만 아무것도 일어나지 않았을때 Saga를 통해 조치를 취하려면 어떻게 해야 할까요? 이를 위해 마감 시한(deadline)을 사용합니다. 송장의 예에서, 신용 카드 지불은 수초안에 결제가 이루어지는 반면, 송장은 보통 수주가 걸립니다. 
 
-Axon은 ```EventScheduler```를 제공하여 이벤트를 발생 시킬 수 있도록 합니다. 송장의 예에서, 송장이 30일 이내에 지불이 완료 되기를 원한다면, Saga를 통해  ```CreateInvoiceCommand```를 보낸 이후에 ```InvoicePaymentDeadlineExpiredEvent```를 30일이 되는 시점에 발생 시킬 수 있습니다. 이벤트 스케쥴러(EventScheduler)는 특정 이벤트를 발생 시키도록 예정(schedule)한 후, ```ScheduleToken```을 반환 합니다. 송장에 대한 지불이 이루어 지면, 반환된 ```ScheduleToken```을 통해 해당 스케쥴을 취소할 수 있습니다.
+Axon은 ```EventScheduler```를 제공하여 이벤트를 발생 시킬 수 있도록 합니다. 송장의 예에서, 송장이 30일 이내에 지불이 완료 되기를 원한다면, Saga를 통해  ```CreateInvoiceCommand```를 보낸 이후에 ```InvoicePaymentDeadlineExpiredEvent```를 30일이 되는 시점에 발생 시킬 수 있습니다. 이벤트 스케쥴러(EventScheduler)는 특정 이벤트를 발생 시키도록 예정(schedule)한 후, ```ScheduleToken```을 반환 합니다. 송장에 대한 지불이 이루어 지면, 반환된 ```ScheduleToken```을 통해 해당 스케쥴을 취소할 수 있습니다. 
 
-Axon은 두개의 ```EventScheduler```구현체들을 제공합니다. 하나는 순수 Java로 작성된 것이고 다른 하나는 backing scheduling 메커니즘인 Quartz2를 사용한 구현체 입니다.
+Axon은 두개의 ```EventScheduler```구현체들을 제공합니다. 하나는 순수 Java로 작성된 것이고 다른 하나는 backing scheduling 메커니즘인 Quartz2를 사용한 구현체 입니다. 
 
-```EventScheduler```의 순수 자바 구현체는 이벤트 게시 일정을 세우기 위해 ```ScheduledExecutorService```를 사용합니다. 이 스케쥴러는 매우 안정적인 타이밍을 제공하지만, 메모리 기반의 구현을 제공합니다. 따라서 JVM이 종료되면, 모든 스케쥴이 사라지게 됩니다. 따라서 긴 기간에 걸친 스케쥴을 위해서는 적당하지 않습니다.
+```EventScheduler```의 순수 자바 구현체는 이벤트 게시 일정을 세우기 위해 ```ScheduledExecutorService```를 사용합니다. 이 스케쥴러는 매우 안정적인 타이밍을 제공하지만, 메모리 기반의 구현을 제공합니다. 따라서 JVM이 종료되면, 모든 스케쥴이 사라지게 됩니다. 따라서 긴 기간에 걸친 스케쥴을 위해서는 적당하지 않습니다. 
 
 ```SimpleEventScheduler```는 ```EventBus```와 ```SchedulingExecutorService```를 함께 설정해 주어야 합니다. (```ScheduledExecutorService``` 생성 시 필요한 헬퍼 메서드는 [```java.util.concurrent.Executors```](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Executors.html)를 참고하세요.)
 
-```QuartzEventScheduler```는 보다 더 안정적이고 엔터프라이즈에 적당한 구현체입니다. Quartz를 기반 스케쥴링 메커니즘으로 사용하면, 영속화, 클러스터링 그리고 실패(misfire) 관리와 같은 보다 더 강력한 기능들을 제공합니다. 해당 기능들을 사용하여 이벤트 게시를 확실히 보장할 수 있습니다. 조금 늦을 수는 있지만 결국 이벤트를 게시할 수 있습니다.
+```QuartzEventScheduler```는 보다 더 안정적이고 엔터프라이즈에 적당한 구현체입니다. Quartz를 기반 스케쥴링 메커니즘으로 사용하면, 영속화, 클러스터링 그리고 실패(misfire) 관리와 같은 보다 더 강력한 기능들을 제공합니다. 해당 기능들을 사용하여 이벤트 게시를 확실히 보장할 수 있습니다. 조금 늦을 수는 있지만 결국 이벤트를 게시할 수 있습니다. 
 
-```QuartzEventScheduler```는 Quartz ```Scheduler```와 ```EventBus```를 필요로 합니다. 선택적으로 기본적으로 "AxonFramework-Events"로 설정되어 있는 Quartz job들이 스케쥴되어 있는 그룹의 이름을 설정할 수 있습니다.
+```QuartzEventScheduler```는 Quartz ```Scheduler```와 ```EventBus```를 필요로 합니다. 선택적으로 기본적으로 "AxonFramework-Events"로 설정되어 있는 Quartz job들이 스케쥴되어 있는 그룹의 이름을 설정할 수 있습니다. 
 
-하나 혹은 그 이상의 콤포넌트들은 스케쥴되어 있는 이벤트들을 수신할 수 있습니다. 이 콤포넌트들은 콤포넌트를 호출하는 쓰레드에 묶여 있는 트랜잭션에 의존할 수 있습니다. 스케쥴된 이벤트들은 ```EventScheduler```를 관리하는 쓰레드에 의해 게시됩니다. 이런 쓰레드들 상의 트랜잭션을 관리하기 위해서, ```TransactionManager``` 혹은 작업 단위(Unit of Work)에 묶인 트랜잭션을 생성하는  ```UnitOfWorkFactory```를 설정할 수 있습니다.
+하나 혹은 그 이상의 콤포넌트들은 스케쥴되어 있는 이벤트들을 수신할 수 있습니다. 이 콤포넌트들은 콤포넌트를 호출하는 쓰레드에 묶여 있는 트랜잭션에 의존할 수 있습니다. 스케쥴된 이벤트들은 ```EventScheduler```를 관리하는 쓰레드에 의해 게시됩니다. 이런 쓰레드들 상의 트랜잭션을 관리하기 위해서, ```TransactionManager``` 혹은 작업 단위(Unit of Work)에 묶인 트랜잭션을 생성하는  ```UnitOfWorkFactory```를 설정할 수 있습니다. 
 
 > Note
-> 스프링을 사용한다면, ```QuartzEventSchedulerFactoryBean``` 혹은  ```SimpleEventSchedulerFactoryBean```을 사용하여 보다 쉽게 설정을 할 수 있습니다.
-> ```QuartzEventSchedulerFactoryBean``` 그리고   ```SimpleEventSchedulerFactoryBean```에 스프링의 트랜잭션 인프라의 핵심 인터페이스인  PlatformTransactionManager를 직접 설정할 수 있습니다.
+> 스프링을 사용한다면, ```QuartzEventSchedulerFactoryBean``` 혹은  ```SimpleEventSchedulerFactoryBean```을 사용하여 보다 쉽게 설정을 할 수 있습니다. 
+> ```QuartzEventSchedulerFactoryBean``` 그리고   ```SimpleEventSchedulerFactoryBean```에 스프링의 트랜잭션 인프라의 핵심 인터페이스인  PlatformTransactionManager를 직접 설정할 수 있습니다. 
 
 #### Injecting Resources, 자원 주입하기
-Saga들은 일반적으로 이벤트에 기반한 상태를 유지하는 것 그 이상의 것들을 처리합니다. Saga들은 외부의 콤포넌트들과 연동할 수 있습니다. 외부 콤포넌트와 연동하기 위해선, 해당 콤포넌트들에 접근하기 위해 필요한 자원들을 사용해야 합니다. 보통 이런 자원들은 Saga 상태의 일부는 아니며 영속화의 대상도 아닙니다. 하지만 Saga가 복원된 이후, 이런 자원들은 Saga 인스턴스에게 이벤트가 전달되기 전에 반드시 주입이 되어야 합니다.
+Saga들은 일반적으로 이벤트에 기반한 상태를 유지하는 것 그 이상의 것들을 처리합니다. Saga들은 외부의 콤포넌트들과 연동할 수 있습니다. 외부 콤포넌트와 연동하기 위해선, 해당 콤포넌트들에 접근하기 위해 필요한 자원들을 사용해야 합니다. 보통 이런 자원들은 Saga 상태의 일부는 아니며 영속화의 대상도 아닙니다. 하지만 Saga가 복원된 이후, 이런 자원들은 Saga 인스턴스에게 이벤트가 전달되기 전에 반드시 주입이 되어야 합니다. 
 
 Saga 인스턴스에게 자원을 주입하기 위한 목적으로 사용되는 ```ResourceInjector```가 있으며, ```SagaRepository```에 의해 사용됩니다. Axon은 애플리케이션 컨텍스트로부터 자원을 받아 애노테이션이 사용된 필드와 메서드에 해당 자원을 주입하는 ```SpringResourceInjector```과 등록된 자원들을 ```@Inject```애노테이션이 사용된 필드와 메서드에 주입하는 ```SimpleResourceInjector```를  제공합니다.
 
 > Tips
-> 자원들을 Saga와 함께 영속화하면 안되기 때문에, ```transient``` 키워드를 해당 자원 필드에 반드시 사용해야 합니다.
-> 이렇게 하면, 해당 필드의 내용을 저장소(repository)에 쓰기 위해 필요한 직렬화 메커니즘을 방지할 수 있습니다.
+> 자원들을 Saga와 함께 영속화하면 안되기 때문에, ```transient``` 키워드를 해당 자원 필드에 반드시 사용해야 합니다. 
+> 이렇게 하면, 해당 필드의 내용을 저장소(repository)에 쓰기 위해 필요한 직렬화 메커니즘을 방지할 수 있습니다. 
 > 저장소는 Saga가 역직렬화 된 이후, 자동으로 필요한 자원을 재 주입합니다.
 
-```SimpleResourceInjector```는 주입되어야 할 자원의 묶음(collection)을 미리 정의하는 것을 허용합니다. ```SimpleResourceInjector```는 Saga의 메서드(setter)와 필드를 스캔하여 ```@Inject``` 애노테이션이 사용된 필드와 메서드를 찾게 됩니다.
+```SimpleResourceInjector```는 주입되어야 할 자원의 묶음(collection)을 미리 정의하는 것을 허용합니다. ```SimpleResourceInjector```는 Saga의 메서드(setter)와 필드를 스캔하여 ```@Inject``` 애노테이션이 사용된 필드와 메서드를 찾게 됩니다. 
 
-설정 API를 사용할 경우, Axon은 ```ConfigurationResourceInjector```를 기본으로 사용합니다. ```ConfigurationResourceInjector```는 설정 객체(Configuration)내의 모든 사용 가능한 자원을 주입할 수 있습니다. ```EventBus```, ```EventStore```, ```CommandBus``` 그리고 ```CommandGateway```와 같은 콤포넌트들을 기본적으로 ```ConfigurationResourceInjector```을 통해 주입할 수 있으며, 주입이 필요한 콤포넌트들은 ```configurer.registerComponent()``` 메서드를 사용하여 주입할 수 있도록 등록할 수 있습니다.
+설정 API를 사용할 경우, Axon은 ```ConfigurationResourceInjector```를 기본으로 사용합니다. ```ConfigurationResourceInjector```는 설정 객체(Configuration)내의 모든 사용 가능한 자원을 주입할 수 있습니다. ```EventBus```, ```EventStore```, ```CommandBus``` 그리고 ```CommandGateway```와 같은 콤포넌트들을 기본적으로 ```ConfigurationResourceInjector```을 통해 주입할 수 있으며, 주입이 필요한 콤포넌트들은 ```configurer.registerComponent()``` 메서드를 사용하여 주입할 수 있도록 등록할 수 있습니다. 
 
-```SpringResourceInejctor```는 스프링의 의존성 주입 메커니즘을 사용하여 aggregate에 필요한 자원을 주입합니다. 다시말해, 필요한 자원을 필드에 직접 주입하거나  setter 메서드를 통한 주입을 사용할 수 있습니다. 주입이 필요한 메서드 혹은 필드는 스프링이 필요한 자원을 주입할 수 있도록 ```@Autowired```와 같은 애노테이션을 사용해야 합니다.
+```SpringResourceInejctor```는 스프링의 의존성 주입 메커니즘을 사용하여 aggregate에 필요한 자원을 주입합니다. 다시말해, 필요한 자원을 필드에 직접 주입하거나  setter 메서드를 통한 주입을 사용할 수 있습니다. 주입이 필요한 메서드 혹은 필드는 스프링이 필요한 자원을 주입할 수 있도록 ```@Autowired```와 같은 애노테이션을 사용해야 합니다. 
 
 ### Saga Infrastructure, Saga 인프라 스트럭쳐(Infrastructure)
-이벤트를 적절한 Saga 인스턴스에 전송해야 합니다. 이를 위해, 몇가지 인프라 스트럭쳐(infrastructure) 클래스들이 필요합니다. 가장 중요한 콤포넌트는 ```SagaManager```와 ```SagaRepository```입니다.
+이벤트를 적절한 Saga 인스턴스에 전송해야 합니다. 이를 위해, 몇가지 인프라 스트럭쳐(infrastructure) 클래스들이 필요합니다. 가장 중요한 콤포넌트는 ```SagaManager```와 ```SagaRepository```입니다. 
 
 #### Saga Manager, Saga 매니져
-이벤트를 처리하는 다른 콤포넌트들처럼, 이벤트 처리는 이벤트 프로세서(processor)에 의해 처리됩니다. 하지만 Saga들은 싱글톤(singleton) 인스턴스가 아니고 개별적인 생애 주기를 가지기 때문에, 별도로 관리될 필요가 있습니다.
+이벤트를 처리하는 다른 콤포넌트들처럼, 이벤트 처리는 이벤트 프로세서(processor)에 의해 처리됩니다. 하지만 Saga들은 싱글톤(singleton) 인스턴스가 아니고 개별적인 생애 주기를 가지기 때문에, 별도로 관리될 필요가 있습니다. 
 
-Axon ```AnnotatedSagaManager```를 통해 Saga 인스턴스의 생애 주기를 관리 하도록 지원합니다. ```AnnotatedSagaManager```은 이벤트 처리를 위한 실제 인스턴스의 호출을 처리하기 위해, 이벤트 프로세서에 제공됩니다. (* EventProcessor의 구현체인 [SubscribingEventProcessor](http://www.axonframework.org/apidocs/3.0/org/axonframework/eventhandling/SubscribingEventProcessor.html) 혹은 [TrackingEventProcessor](http://www.axonframework.org/apidocs/3.0/org/axonframework/eventhandling/TrackingEventProcessor.html)의 생성자를 보면 [EventHandlerInvoker](http://www.axonframework.org/apidocs/3.0/org/axonframework/eventhandling/EventHandlerInvoker.html)를 인자로 받는 것을 볼 수 있습니다. 그리고 [AnnotatedSagaManager](http://www.axonframework.org/apidocs/3.0/org/axonframework/eventhandling/saga/AnnotatedSagaManager.html)는 [EventHandlerInvoker](http://www.axonframework.org/apidocs/3.0/org/axonframework/eventhandling/EventHandlerInvoker.html)의 하위 타입입니다.) ```AnnotatedSagaManager```는 관리되어야 할 Saga의 타입을 사용하여 초기화되며, Saga 유형을 저장하고 검색 할 수있는 Saga 저장소도 포함됩니다. 하나의 ```AnnotatedSagaManager```는 오로지 하나의 Saga 유형을 관리할 수 있습니다.
+Axon ```AnnotatedSagaManager```를 통해 Saga 인스턴스의 생애 주기를 관리 하도록 지원합니다. ```AnnotatedSagaManager```은 이벤트 처리를 위한 실제 인스턴스의 호출을 처리하기 위해, 이벤트 프로세서에 제공됩니다. (* EventProcessor의 구현체인 [SubscribingEventProcessor](http://www.axonframework.org/apidocs/3.0/org/axonframework/eventhandling/SubscribingEventProcessor.html) 혹은 [TrackingEventProcessor](http://www.axonframework.org/apidocs/3.0/org/axonframework/eventhandling/TrackingEventProcessor.html)의 생성자를 보면 [EventHandlerInvoker](http://www.axonframework.org/apidocs/3.0/org/axonframework/eventhandling/EventHandlerInvoker.html)를 인자로 받는 것을 볼 수 있습니다. 그리고 [AnnotatedSagaManager](http://www.axonframework.org/apidocs/3.0/org/axonframework/eventhandling/saga/AnnotatedSagaManager.html)는 [EventHandlerInvoker](http://www.axonframework.org/apidocs/3.0/org/axonframework/eventhandling/EventHandlerInvoker.html)의 하위 타입입니다.) ```AnnotatedSagaManager```는 관리되어야 할 Saga의 타입을 사용하여 초기화되며, Saga 유형을 저장하고 검색 할 수있는 Saga 저장소도 포함됩니다. 하나의 ```AnnotatedSagaManager```는 오로지 하나의 Saga 유형을 관리할 수 있습니다. 
 
-설정 API를 사용할 경우, Axon은 인지할 수 있는 대부분의 콤포넌트에 대한 기본값을 사용합니다. 하지만 ```SagaStore```의 구현체를 정의하여 사용하는 것을 권장합니다. ```SagaStore```은 Saga 인스턴스를 '물리적인' 저장소에 저장하는 메커니즘입니다. 기본으로 사용되는 ```AnnotatedSagaRepository```는 Saga 인스턴스를 저장하고 필요에 따라 저장된 Saga 인스턴스를 반환하기 위해 ```SagaStore```를 사용합니다.
+설정 API를 사용할 경우, Axon은 인지할 수 있는 대부분의 콤포넌트에 대한 기본값을 사용합니다. 하지만 ```SagaStore```의 구현체를 정의하여 사용하는 것을 권장합니다. ```SagaStore```은 Saga 인스턴스를 '물리적인' 저장소에 저장하는 메커니즘입니다. 기본으로 사용되는 ```AnnotatedSagaRepository```는 Saga 인스턴스를 저장하고 필요에 따라 저장된 Saga 인스턴스를 반환하기 위해 ```SagaStore```를 사용합니다. 
 
 ```
 Configurer configurer = DefaultConfigurer.defaultConfiguration();
 configurer.registerModule(
 	SagaConfiguration.subscribingSagaManager(MySagaType.class)
-	// Axon은 메모리 기반 SagaStore를 기본으로 사용하지만, 다른 SagaStore를 사용하는 것을 권장합니다.
+	// Axon은 메모리 기반 SagaStore를 기본으로 사용하지만, 다른 SagaStore를 사용하는 것을 권장합니다. 
 	.configureSagaStore(c -> new JpaSagaStore(...))
 );
 
@@ -921,42 +921,119 @@ configurer.registerComponent(SagaStore.class, c -> new JpaSagaStore(...));
 
 ```SagaManager```의 필요에 의해 ```SagaRepository```는 Saga들을 저장하고 반환하는 역활을 합니다. ```SagaRepository```는 Saga 인스턴스들의 식별자는 물폰 연결 값을 사용하여 특정 Saga 인스턴스들을 반환할 수 있습니다.
 
-그런데 특별히 필요한 사항들이 있습니다. Saga들에 대한 동시성 처리는 매우 깨지기 쉽기 때문에, 레포지토리는 식별자의 동치로 구분되는 동일한 Saga 유형의 인스턴스는 반드시 JVM상에 단 하나의 인스턴스가 존재하는 것을 보장해야 합니다. 즉, 동일한 식별자를 가지는 Saga인스턴스는 반드시 하나만 존재해야 합니다. 이때 동일 여부는 식별자의 ```equals```메서드로 판단 합니다.
+그런데 특별히 필요한 사항들이 있습니다. Saga들에 대한 동시성 처리는 매우 깨지기 쉽기 때문에, 레포지토리는 식별자의 동치로 구분되는 동일한 Saga 유형의 인스턴스는 반드시 JVM상에 단 하나의 인스턴스가 존재하는 것을 보장해야 합니다. 즉, 동일한 식별자를 가지는 Saga인스턴스는 반드시 하나만 존재해야 합니다. 이때 동일 여부는 식별자의 ```equals```메서드로 판단 합니다. 
 
 Axon은 ```AnnotatedSagaRepository``` 구현체를 제공합니다. ```AnnotatedSagaRepository```는 Saga 인스턴스를 조회하고 동일 시점에 단일 Saga 인스턴스에 접근하도록 합니다. ```AnnotatedSagaRepository```는 Saga 인스턴스의 영속화를 ```SagaStore```를 통해 수행합니다.
 
-애플리케이션에서 사용하는 저장 엔진에 따라 구현체를 선택하여 사용합니다. Axon에서 제공하는 ```JdbcSagaStore```, ```InMemorySagaStore```, ```JpaSagaStore``` 그리고 ```MongoSagaStore```를 사용할 수 있습니다.
+애플리케이션에서 사용하는 저장 엔진에 따라 구현체를 선택하여 사용합니다. Axon에서 제공하는 ```JdbcSagaStore```, ```InMemorySagaStore```, ```JpaSagaStore``` 그리고 ```MongoSagaStore```를 사용할 수 있습니다. 
 
 경우에 따라, Saga 인스턴스를 캐싱하여 사용하는 것이 더 좋을 수 있습니다. 이 경우, 캐싱 기능을 사용하기 위해 다른 구현체를 기반으로  ```CachingSagaStore```를 사용할 수 있습니다. ```CachingSagaStore```는 생성자에서 ```delegate```라는 SagaStore의 구현체를 인자로 받습니다. ```delegate```로 Axon에서 제공하는 ```JdbcSagaStore```, ```InMemorySagaStore```, ```JpaSagaStore``` 그리고 ```MongoSagaStore```과 같은 ```SagaStore```의 구현체를 사용하면 됩니다. ```CachingSagaStore```는 연속 기입 (write-through) 캐시입니다. 다시 말해, 데이터 안전성을 보장하기 위해 저장 작업이 즉시 백업 저장소로 즉시 전달됩니다.
 
 ##### JpaSagaStore, JpaSagaStore
 ```JpaSagaStore```는 Saga의 상태와 연결 값들을 저장하기 위해 JPA를 사용합니다. Saga 자체에 JPA 애노테이션들을 사용할 필요는 없습니다. Axon은  ```Serializer```를 사용하여 Saga들을직력화 합니다. (이벤트 직렬화와 비슷하게, ```JavaSerializer``` 혹은 ```XStreamSerializer```를 사용할 수 있습니다.)
 
-```JpaSagaStore```는 ```EntityManager``` 인스턴스에 대한 접근을 제공하는 ```EntityManagerProvider```와 함께 설정되어야 합니다. 이런 추상화를 통해 애플리케이션에 관리되거나 컨테이너에서 관리되는 ```EntityManager```들을 사용할 수 있습니다. 선택적으로, Saga 인스턴스를 직력화 하기위한 시리얼라이져(serializer)를 정의하여 사용할 수 있으며, Axon에서는 ```XStreamSerializer```를 기본으로 사용합니다.
+```JpaSagaStore```는 ```EntityManager``` 인스턴스에 대한 접근을 제공하는 ```EntityManagerProvider```와 함께 설정되어야 합니다. 이런 추상화를 통해 애플리케이션에 관리되거나 컨테이너에서 관리되는 ```EntityManager```들을 사용할 수 있습니다. 선택적으로, Saga 인스턴스를 직력화 하기위한 시리얼라이져(serializer)를 정의하여 사용할 수 있으며, Axon에서는 ```XStreamSerializer```를 기본으로 사용합니다. 
 
 ##### JdbcSagaStore
-```JdbcSagaStore```는 Saga의 상태와 연결 값들을 저장하기 위해 일반 JDBC를 사용합니다. ```JpaSagaStore```와 비슷하게, Saga 인스턴스는 자신들이 어떻게 저장이 되는지에 대해 신경 쓸 필요는 없습니다. Saga 인스턴스들은 시리얼라이져(serializer)를 통해 직렬화 됩니다.
+```JdbcSagaStore```는 Saga의 상태와 연결 값들을 저장하기 위해 일반 JDBC를 사용합니다. ```JpaSagaStore```와 비슷하게, Saga 인스턴스는 자신들이 어떻게 저장이 되는지에 대해 신경 쓸 필요는 없습니다. Saga 인스턴스들은 시리얼라이져(serializer)를 통해 직렬화 됩니다. 
 
 ```JdbcSagaStore```는 ```DataSource``` 혹은 ```ConnectionProvider```과 함께 초기화 됩니다. 반드시 필요하진 않지만, ```JdbcSagaStore```를 ```ConnectionProvider```와 함께 초기화 할때, ```UnitOfWorkAwareConnectionProviderWrapper```로 ```ConnectionProvider```구현체를 한번 감싸서 ```UnitOfWorkAwareConnectionProviderWrapper```를 ```ConnectionProvider```로 사용하는 것을 권장합니다. 이렇게 하면, 현재의 작업 단위(Unit of Work)에 연결되어 있는 데이터베이스 커넥션(connection)이 있는지 확인하여 작업 단위내의 모든 작업이 단일 커넥션으로 처리되는 것을 보장할 수 있습니다.
 
-JPA와는 달리, JdbcSagaRepository(* 3.x에서 deprecated된 것으로 보이고 SagaSqlSchema을 대신 사용하는 것으로 보임)는 Saga에 대한 정보를 저장하고 조회하기 위해 일반적인 SQL 구문을 사용합니다. 따라서 몇몇 쿼리 작업은 데이터베이스에 의존적인 SQL 문법을 사용해야 합니다.  또한 특정 데이터베이스 공급 업체가 제공하는 비 표준 기능을 사용하고자 하는 경우가 있을 수 있습니다. 이런 경우에 대처하기 위해, 직접 ```SagaSqlSchema``` 구현체를 작성하여 ```JdbcSagaStore```에 제공 할 수 있습니다. ```SagaSqlSchema```는 기반 데이터베이스위에서 레포지토리가 필요로 하는 모든 작업을 정의한 인터페이스로, 개별 작업에 사용되는 SQL 구문을 재정의하여 사용할 수 있도록 합니다. ```SagaSqlSchema```의 기본 구현체는 ```GenericSagaSqlSchema```이며, 그 외에 ```PostgressSagaSqlSchema```, ```Oracle11SagaSqlSchema``` 그리고 ```HsqlSagaSchema```들이 있습니다.
+JPA와는 달리, JdbcSagaRepository(* 3.x에서 deprecated된 것으로 보이고 SagaSqlSchema을 대신 사용하는 것으로 보임)는 Saga에 대한 정보를 저장하고 조회하기 위해 일반적인 SQL 구문을 사용합니다. 따라서 몇몇 쿼리 작업은 데이터베이스에 의존적인 SQL 문법을 사용해야 합니다.  또한 특정 데이터베이스 공급 업체가 제공하는 비 표준 기능을 사용하고자 하는 경우가 있을 수 있습니다. 이런 경우에 대처하기 위해, 직접 ```SagaSqlSchema``` 구현체를 작성하여 ```JdbcSagaStore```에 제공 할 수 있습니다. ```SagaSqlSchema```는 기반 데이터베이스위에서 레포지토리가 필요로 하는 모든 작업을 정의한 인터페이스로, 개별 작업에 사용되는 SQL 구문을 재정의하여 사용할 수 있도록 합니다. ```SagaSqlSchema```의 기본 구현체는 ```GenericSagaSqlSchema```이며, 그 외에 ```PostgressSagaSqlSchema```, ```Oracle11SagaSqlSchema``` 그리고 ```HsqlSagaSchema```들이 있습니다. 
 
 ##### MongoSagaStore
-이름에서 알 수 있듯이, ```MongoSagaStore```는 MongoDB 데이터베이스를 대상으로 Saga의 상태와 연결 값들을 저장합니다. ```MongoSagaStore```는 모든 saga들을 MongoDB 데이터베이스의 하나의 컬렉션(collection)에 저장하며 Saga인스턴스 당 하나의 도큐먼트(document)가 생성이 됩니다.
+이름에서 알 수 있듯이, ```MongoSagaStore```는 MongoDB 데이터베이스를 대상으로 Saga의 상태와 연결 값들을 저장합니다. ```MongoSagaStore```는 모든 saga들을 MongoDB 데이터베이스의 하나의 컬렉션(collection)에 저장하며 Saga인스턴스 당 하나의 도큐먼트(document)가 생성이 됩니다. 
 
 ```MongoSagaStore```는 또한 고유한 식별자를 가지는 단일 Saga 인스턴스가 JVM상에 존재하도록 보장합니다. 따라서 동시성 문제로 인해 상태 값을 잃어버리지 않도록 보장해 줍니다.
 
-```MongoSagaStore```는 ```MongoTemplate```과 선택적으로 ```Serializer```를 사용하여 초기화 됩니다. ```MongoTemplate```은 Saga를 저장하는 컬렉션에 대한 참조를 제공합니다. Axon은 ```MongoClient```와 데이터베이스 이름 그리고 Saga들이 저장되는 컬렉션 이름을 필요로 하는 ```DefaultMongoTemplate```을 제공합니다. 데이터베이스 이름과 컬렉션 이름은 생략할 경우, 데이터베이스 이름으로 "axonframework"가 사용되며 컬렉션 이름으로 "sagas"를 사용합니다.
+```MongoSagaStore```는 ```MongoTemplate```과 선택적으로 ```Serializer```를 사용하여 초기화 됩니다. ```MongoTemplate```은 Saga를 저장하는 컬렉션에 대한 참조를 제공합니다. Axon은 ```MongoClient```와 데이터베이스 이름 그리고 Saga들이 저장되는 컬렉션 이름을 필요로 하는 ```DefaultMongoTemplate```을 제공합니다. 데이터베이스 이름과 컬렉션 이름은 생략할 경우, 데이터베이스 이름으로 "axonframework"가 사용되며 컬렉션 이름으로 "sagas"를 사용합니다. 
 
 ##### Caching, 캐슁
-Saga 스토리지(storage)로 데이터베이스를 사용할 경우, Saga 인스턴스를 저장하고 조회하는 것은 상대적으로 비용이 많이 드는 작업입니다. 특히 짧은 시간 동안 동일한 Saga 인스턴스를 조회하는 상황에선, 캐쉬를 사용하는 것이 애플리케이션의 성능 향상에 많은 도움이 될 수 있습니다.
+Saga 스토리지(storage)로 데이터베이스를 사용할 경우, Saga 인스턴스를 저장하고 조회하는 것은 상대적으로 비용이 많이 드는 작업입니다. 특히 짧은 시간 동안 동일한 Saga 인스턴스를 조회하는 상황에선, 캐쉬를 사용하는 것이 애플리케이션의 성능 향상에 많은 도움이 될 수 있습니다. 
 
-Axon은 ```CachingSagaStore```의 구현체를 제공하며, ```CachingSagaStore```는 실제 Saga 저장소 역활을 하는 다른 ```SagaStore``` 구현체의 래퍼(wrapper)입니다. Saga 혹은 연결 값을 로딩할 때, ```CachingSagaStore```는 먼저 자신 내부의 캐쉬를 검색하고 캐쉬가 해당 객체를 가지고 있지 않으면 감싸고 있는 레퍼지토리를 통해 필요한 객체를 반환 받습니다. Saga 인스턴스를 저장할때, 감싸고 있는 레퍼지토리가 일관된 Saga의 상태를 가질 수 있도록 해당 레퍼지토리에게 저장 작업을 위임합니다.
+Axon은 ```CachingSagaStore```의 구현체를 제공하며, ```CachingSagaStore```는 실제 Saga 저장소 역활을 하는 다른 ```SagaStore``` 구현체의 래퍼(wrapper)입니다. Saga 혹은 연결 값을 로딩할 때, ```CachingSagaStore```는 먼저 자신 내부의 캐쉬를 검색하고 캐쉬가 해당 객체를 가지고 있지 않으면 감싸고 있는 레퍼지토리를 통해 필요한 객체를 반환 받습니다. Saga 인스턴스를 저장할때, 감싸고 있는 레퍼지토리가 일관된 Saga의 상태를 가질 수 있도록 해당 레퍼지토리에게 저장 작업을 위임합니다. 
 
-캐쉬를 설정하기 위해선, 간단히 ```SagaStore``` 구현체를 ```CachingSagaStore```에 전달해주면 됩니다. ```CachingSagaStore```의 생성자는 세개의 매개변수를 받습니다. 첫번째 매개변수는 레퍼지토리이며, 두번째 매개변수는 연결 값에 대한 캐쉬 그리고 마지막 매개변수는 Saga에 대한 캐쉬입니다. 애플리케이션에 따라서 두번째와 세번째 인자들은 동일한 캐쉬 객체 혹은 다른 캐쉬 객체를 참조할 수도 있습니다.
+캐쉬를 설정하기 위해선, 간단히 ```SagaStore``` 구현체를 ```CachingSagaStore```에 전달해주면 됩니다. ```CachingSagaStore```의 생성자는 세개의 매개변수를 받습니다. 첫번째 매개변수는 레퍼지토리이며, 두번째 매개변수는 연결 값에 대한 캐쉬 그리고 마지막 매개변수는 Saga에 대한 캐쉬입니다. 애플리케이션에 따라서 두번째와 세번째 인자들은 동일한 캐쉬 객체 혹은 다른 캐쉬 객체를 참조할 수도 있습니다. 
 
-## Testing
-// TODO - continue
+## Testing, 테스팅
+CQRS의 가장 큰 이점 중 하나이면서 특히 이벤트 소싱의 이점 중 하나는 이벤트와 명령으로 테스트를 순수하게 표현할 수 있다는 것입니다. 기능적 콤포넌트, 이벤트 그리고 명령들은 도메인 전문가 혹은 비지니스 소유자(owner)가 알기 쉽도록 되어 있습니다. 테스트가 이벤트와 명령으로 명확한 기능적 의미를 표현하는 것 뿐만 아니라, 구현 선택에 거의 의존하지 않는 다는 것을 의미합니다. 
+
+이번 장에서 설명할 기능들은 ```axon-test``` 모듈을 필요로 합니다. ```axon-test``` 모듈은 메이븐 의존성 설정을 아래와 같이 설정하여 사용할 수 있습니다. 혹은 전체 패키지를 다운로드 하여 사용할 수 있습니다.
+
+```
+<dependency>
+	<groupId>org.axonframework</groupId>
+   <artifactId>axon-test</actifactId>
+   <scope>test</scope> 
+</dependency>
+```
+
+이번 장에서 설명할 픽스쳐(fixture)는 JUnit과 TestNG와 같은 테스트 프레임워크와 연동이 가능합니다. 
+
+### Command Component Testing, 명령 콤포넌트 테스팅
+명령 처리 콤포넌트는 가장 큰 복잡성을 가지는 CQRS 기반 아키텍쳐의 전형적인 콤포넌트입니다. 다른 콤포넌트 보다 더 복잡하다는 것은, 명령 콤포넌트를 테스트 하기 위한 추가적인 필요 사항들이 있다는 것을 말합니다. 
+
+보다 더 복잡하긴 하지만, 명령 처리자 콤포넌트의 API는 상당히 쉽습니다. 명령 처리자 콤포넌트는 처리할 명령을 받고, 이벤트를 발생시키는 기능을 수행합니다. 몇몇 경우에, 명령 실행의 일부로써 쿼리를 수행 할 수도 있습니다. 그 외에는, 명령들과 이벤트들가 API의 유일한 부분입니다. 따라서 명령과 이벤트들로 완전한 테스트할 시나리오를  작성할 수 있습니다. 일반적으로 테스트는 다음과 같은 형태로 작성 할 수 있습니다.
+
+* given: 주어진 이미 발생한 특정 이벤트 들이 있다,
+* when: 해당 명령을 실행할 때,
+* expect: 이런 이벤트들이 게시되고 혹은 저장된다.
+
+Axon Framework은 위에서 설명한 형태의 테스트를 작성할 수 있도록 테스트 픽스쳐를 제공합니다. ```AggregateTestFixture```는 특정 인프라 스트럭쳐의 설정, 필요한 명령 처리자와 레퍼지토리의 조합 그리고 테스트 시나리오를 given-when-then 형태의 이벤트와 명령들로 작성할 수 있도록 해줍니다.
+
+다음의 예제 코드를 통해 JUnit4 기반으로 테스트 픽스쳐를 사용하여 given-when-then 형태의 테스트 코드를 작성하는 방법을 볼 수 있습니다.
+
+```
+public class MyCommandComponentTest {
+	private FixtureConfiguration fixture; // 테스트 픽스쳐
+	
+	@Before
+	public void setUp() {
+		fixture = new AggregateTestFixture(MyAggregate.class);
+	}
+	
+	@Test
+	public void testFirstFixture() {
+		fixture.given(new MyEvent(1))
+				.when(new TestCommand())
+				.expectSuccessfulHandlerExecution()
+				.expectEvents(new MyEvent(2));
+				
+		/*
+		위 4줄의 코드가 실제 테스트 시나리오와 시나리오에 대한 기대값을 정의한 것입니다.
+		첫번째 줄의 코드는 이미 발생한 이벤트를 정의한 것이며, 이 이벤트들은 테스트 상에서 aggregate의 상태를 정의합니다. 
+		좀 더 구체적으로 말하면, aggregate가 로딩되었을때, 이벤트 저장소가 반환하는 이벤트들을 말합니다.
+		두번째 줄의 코드는 시스템 상에서 처리해야 할 명령을 정의 합니다. 
+		
+		마지막 두 줄의 코드는 기대 행위와 기대 값을 정의한 것으로, 이 중 첫번째 코드는 명령 처리가자 성공적으로 명령을 처리했는지를 확인하는 코드이며, 마지막 줄의 코드는 명령의 실행 결과로 발생한 단일 이벤트가 기대한 이벤트와 맞는지를 검증하는 코드입니다.
+		
+		*/				
+	}
+}
+
+```
+given-when-then 테스트 픽스쳐는 설정, 실행 그리고 검증의 세 단계로 정의 됩니다. 개별 단계들은 각기 다른 인터페이스(interface)로 표현되며, 각각의 인터페이스는 다음과 같습니다. 
+
+* 설정: FixtureConfiguration
+* 실행: TestExecutor
+* 검증: ResultValidator
+
+```Fixtures``` 클래스의 정적 메서드인 ```newGivenWhenThenFixture()``` 메서드는 설정에 대한 FixtureConfiguration의 참조를 제공합니다. (* ```Fixtures``` 클래스는 2.x 버전 이하에서만 제공됩니다.)
+
+> Note
+> 위의 세 단계간에 이동을 최적화 하기 위해선, 위의 예제 코드와 같이 이 메서드들이 반환하는 인터페이스를 사용하는 것이 제일 좋습니다. 
+
+설정 단계(예, 첫번째 "given" 이전)동안, 테스트 실행에 필요한 빌딩 블록들을 제공할 수 있습니다. 테스트를 위해 특별히 사용될 이벤트 버스, 커맨드 버스 그리고 이벤트 저장소를 픽스쳐의 일부분으로 제공됩니다. ```FixtureConfiguration```를 통해 이벤트 버스, 커맨드 버스 그리고 이벤트 저장소에 대한 참조를 얻을 수 있습니다. (이벤트 버스, 커맨드 버스 그리고 이벤트 저장소에대한 getter 메서드를 제공합니다.) Aggregate에 직접 등록되지 않은 명령 처리자들은 ```FixtureConfiguration```의 ```registerAnnotatedCommandHandler``` 메서드를 통해 명시적으로 설정이 되어야 합니다. 애노테이션 기반의 명령 처리자 외에도 테스트 관련 인프라 설정 방법을 정의하는 다양한 구성 요소와 설정을 구성 할 수 있습니다.
+
+픽스쳐가 설정이 되면, 이미 발생한("given") 이벤트를 정의 할 수 있습니다. 테스트 픽스쳐는 이런 이벤트들을 ```DomainEventMessage```로 감싸서 처리합니다. 주어진("given") 이벤트들이 Message의 구현체라면, 메세지의 페이로드와 메타 데이터는 ```DomainEventMessage```에 포함됩니다. 그렇지 않은 경우는, 주어진 이벤트는 페이로드로 사용이 됩니다. 0에서 부터 시작하는 일련의 ```DomainEventMessage```의 일련번호는 순차적으로 증가합니다.
+
+혹은 주어진("given")명령어를 제공할 수 도 있습니다. 이 경우, 테스트 대상이 되는 실제 명령이 실행될때, 주어진 명령어에 의해 발생되는 이벤트들이 Aggregate의 이벤트 소스로 사용됩니다. ```givenCommands(...)``` 메서드를 사용하여 명령 객체들을 설정합니다. 
+
+ // TODO - continue
+ “The execution phase allows you to provide a Command to be executed against the command handling component.”
+
+다음에서 발췌: AxonFramework. ‘Axon Framework Reference Guide.’ iBooks.  
+
 
 
 
