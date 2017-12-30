@@ -1029,10 +1029,93 @@ given-when-then 테스트 픽스쳐는 설정, 실행 그리고 검증의 세 �
 
 혹은 주어진("given")명령어를 제공할 수 도 있습니다. 이 경우, 테스트 대상이 되는 실제 명령이 실행될때, 주어진 명령어에 의해 발생되는 이벤트들이 Aggregate의 이벤트 소스로 사용됩니다. ```givenCommands(...)``` 메서드를 사용하여 명령 객체들을 설정합니다. 
 
- // TODO - continue
- “The execution phase allows you to provide a Command to be executed against the command handling component.”
+실행 단계에서는 명령 처리자가 처리할 명령을 제공해야 합니다. 해당 명령 처리를 위해 호출되는 처리자(Aggregate 상의 처리자 혹은 외부 처리자)의 작동은 감시되고 검증 단계에 등록된 기대 사항들과 비교 됩니다. 
 
-다음에서 발췌: AxonFramework. ‘Axon Framework Reference Guide.’ iBooks.  
+> Note
+> 테스트의 실행 단계 동안, Axon을 통해 테스트 하에서의 Aggregate의 비 정상적인 상태 변경을 발견할 수 있습니다. 
+> Aggregate가 "주어진(given)" 이벤트들과 저장된 이벤트들로부터 복원(sourced)된 상태에서 Aggregate의 상태를 변경 시킬 명령을 실행 한 후에 Aggregate의 상태를 비교하여 비 정상적인 상태 변경을 발견합니다. 
+> 만약 상태가 기대한 상태와 동일하지 않다면, Aggregate의 이벤트 처리자 메서드가 아닌 다른 곳에서 Aggregate의 상태가 변경된 것 입니다. 
+> 정적이고 transient한 필드들은 비교 대상에서 제외 됩니다.
+> 비 정상적 상태 변경의 감지 기능은 ```setReportIllegalStateChange(boolean reportIllegalStateChange)``` 메서드를 통해 키거나 끌 수 있습니다.
+
+마지막 단계인 검증 단계에선, 반환 값들과 이벤트들을 통해 명령 처리 콤포넌트의 작업들을 확인할 수 있습니다. 
+
+테스트 픽스쳐를 통해 명령 처리자의 반환값을 검증 할 수 있습니다. 명시적으로 기대 되는 반환 값을 정의하거나 해당 메서드가 성공적으로 결과를 반환 했는지를 확인 할 수 있습니다. 또한 명령 처리자가 던질 수 있는 예외를 기대값으로 설정하여 확인 할 수 있습니다. 
+
+게시된 이벤트를 검증할 수 있으며, 이벤트를 확인할 수 있는 방법은 두가지 방법이 있습니다. 
+
+첫번째 방법은 실제 이벤트와 문자 그대로 비교되어야하는 이벤트 인스턴스를 전달하는 것입니다.기대 이벤트의 모든 속성들을 실제 발생한 이벤트의 동일 속성들과 비교(```equals()``` 메서드 사용)합니다. 만약 한 속성이라도 동일하지 않다면, 해당 테스트는 실패할 것이고 상세한 결과를 담음 에러 결과를 생성합니다.
+
+다른 검증 방법은 Hamcrest 라이브러리의 Matcher들을 사용하여 기대값들을 표현하는 것입니다. ```Matcher```는 ```matches(Object)```와 ```describe(Description)``` 메서드를 포함하고 있는 인터페이스입니다. ```matches(Object)``` 메서드는 주어진 객체가 비교 대상과 일치 하는지를 검증하여 참 혹은 거짓을 반환합니다. ```describe(Description)``` 메서드는 기대 사항을 표현할 수 있도록 해줍니다. 예를 들어, "GreaterThanTwoMatcher"에 "다른 두 이벤트보다 큰 값을 가진 이벤트"라는 설명을 추가할 수 있습니다. 설명(Description)은 테스트가 실패 했을 때 실패한 이유에 대한 에러 메세지를 표현하는데 사용할 수 있습니다. 
+
+이벤트들에 대한 ```matcher```들을 생성하는 것은 장황하고 에러를 발생 시킬 수 있습니다. 간단히 코드를 작성하기 위해, Axon에서 제공하는 이벤트 검증을 위한 ```matcher```들을 사용하여 발생한 이벤트들을 검증할 수 있습니다.
+
+아래의 예를 통해 이벤트 목록에 대한 ```matcher```들과 목적을 확인 할 수 있습니다.
+
+* List with all of: ```Matchers.listWithAllOf(event matchers...)```
+해당 matcher는 주어진 이벤트 matcher가 실제 발생한 이벤트들 중 적어도 하나 이상의 이벤트와 일치하면 성공 결과를 반환합니다. 여러개의 matchers가 같은 이벤트와 맞는지,리스트의 이벤트가 어떤 matchers와도 일치하지 않든 상관 없습니다. // TODO 두번째 "리스트의 이벤트가 어떤 matchers와도 일치하지 않든 상관 없습니다." 재 확인 필요.
+*  List with any of: ```Matchers.listWithAnyOf(event matchers...)```
+이 matcher는 주어진 이벤트 matcher들 중 하나 혹은 그 이상이 실제 발생한 이벤트들 중 하나 혹은 그 이상의 이벤트와 일치하면 성공 결과를 반환합니다. 몇개의 matcher들은 다수의 이벤트에 일치하는 반면, 일부 matcher들은 전혀 일치 하지 않을 수 있습니다.
+*  Sequence of Events: ```Matchers.sequenceOf(event matchers...)```
+실제 발생한 이벤트와 발생 순서가 주어진 이벤트 matcher와 동일한 순서 인지를 검증하기 위해 이 matcher를 사용합니다. 개별 matcher는 이전 matcher가 일치 여부를 검증한 이벤트 다음의 이벤트를 검증하여 검증 결과를 반환합니다. 즉, 주어진 이벤트 matcher가 모두 검증에 성공을 하면 결과는 성공이 됩니다. 따라서 matcher와 일치하지 않는 이벤트가 나타날 수 있는 가능성이 있습니다.
+만약 모든 이벤트를 검증 한 후에도 matcher가 남아 있다면, 남아 있는 matcher들은 ```null```과 일치 여부를 검증하게 됩니다. 따라서 남아 있는 matcher들이 ```null```을 허용하는지 아닌지에 따라 성공 여부가 결정됩니다.
+
+* Exact sequence of Events: ```Matchers.exactSequenceOf(event matchers...)```
+"Sequence of Events"의 변형된 matcher로 "Sequence of Events"에서는 matcher와 일치하지 않는 이벤트가 발생할 수 있었으나, 이 matcher는 일치하지 않는 이벤트를 허용하지 않습니다. 따라서 정확한 순서로 이벤트가 발생했는지를 검증 할 수 있습니다. 
+
+편의상, 자주 사용되는 이벤트 matcher들만 살펴보았습니다. 다음은 단일 이벤트에 대한 matcher 메서드를 살펴보겠습니다. 
+
+* Equal Event: ```Matchers.equalTo(instance...)```
+해당 matcher는 주어진 객체와 발생한 이벤트가 의미상 동일한지를 검증합니다. 두 객체간 모든 속성들을 비교하며 ```null```비교를 허용하여 문제없이 ```null```비교를 할 수 있습니다. 다시 말하면 ```equals```메서드를 구현하지 않은 이벤트들도 비교할 수 있습니다. 주어진 매개변수 객체의 속성들에 저장되어있는 객체들은 ```equals```메서드를 통해 비교하므로, 속성 객체는 ```equals```를 정확히 구현해야 합니다. 
+* No More Events: ```Matchers.andNoMore()``` 혹은 ```Matchers.nothing()```
+위 matcher는 ```null```값을 비교하는 matcher로 "Exact sequence of Events"의 가장 마지막에 사용되어 일치하지 않는 이벤트들이 남아 있지 않도록 합니다.
+
+위의 matcher들은 이벤트의 목록에 대해 검증을 하는데, 때로는 메세지의 페이로드 부분만 검증해야 할 수 있습니다. 이런 경우 사용할 수 있는 matcher들은 아래와 같습니다. 
+
+* Payload Matching: ```Matchers.messageWithPayload(payload matcher)```
+실제 메세지의 페이로드와 주어진 페이로드 matcher가 일치하는지를 검증합니다.
+* Payloads Matching: ```Matchers.payloadsMatching(list matcher)```
+실제 메세지들의 페이로드들이 주어진 페이로드들과 일치하는지를 검증합니다. 인자로 주어진 matcher는 메세지들의 페이로드를 포함하는 목록과 반드시 일치해야 합니다. "Payload Matching" matcher는 일반적으로 페이로드 matcher들의 반복을 방지하기 위한 페이로드 matcher들을 감싸는 외부 matcher로 사용이 됩니다.
+
+아래의 예제 코드를 통해 위에서 살펴본 matcher들의 사용법에 대해 간단히 살펴보겠습니다. 아래의 예제를 통해 두개의 이벤트가 게시될 것으로 예상하며, 첫번째 이벤트는 반드시 "ThirdEvent"이어야 하고 두번째 이벤트는 "aFourthEventWithSomethingSpecialThings"이어야 합니다. 세번째로 발생하는 이벤트는 없고 이를 검증하기 위해 "andNoMore" matcher를 사용하였습니다. 
+
+```
+fixture.given(new FirstEvent(), new SecondEvent())
+		.when(new DoSomethingCommand("aggregateId"))
+		expectEventsMatching(
+			exactSequenceOf(
+				// 페이로드 부분만 검증합니다.
+				mesageWithPayload(equalTo(new ThirdEvent())),
+		
+				// 메세지에 대한 검증을 합니다.
+				aFourthEventWithSomethingSpecialThings(),
+		
+				//더 이상의 이벤트가 없음을 검증합니다.
+				andNoMore()
+			)
+		);
+		
+		//혹은 페이로드 부분만을 검증할 수 있습니다.
+		.expectEventMatching(
+			payloadsMatching(
+				exactSequenceOf(
+					// 페이로드만 검증하기때문에, equalTo를 바로 사용합니다.
+					equalTo(new ThirdEvent()),					
+					//아래의 코드 또한 페이로드 부분만 검증합니다.
+					aFourthEventWithSomeSpecialThings(),
+					
+					// 더 이상의 이벤트가 없음을 검증합니다.
+					andNoMore()
+				)
+			)
+		);
+
+```
+
+### Testing Annotated Sagas, 애노테이션 기반의 Saga 테스트 하기
+// TODO- continue
+
+
 
 
 
