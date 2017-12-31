@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Axon framework reference guide 번역 중.(on going)
-date: 2017-12-29 09:36:55
+date: 2017-12-30 09:36:55
 tags: [Java, Axon, Axon-framework, CQRS]
 categories: [Java, Axon, CQRS]
 ---
@@ -1123,12 +1123,65 @@ fixture.given(new FirstEvent(), new SecondEvent())
 ```
 
 ### Testing Annotated Sagas, 애노테이션 기반의 Saga 테스트 하기
-// TODO- continue
+명령 처리 콤포넌트와 비슷하게, Saga들도 이벤트에 응답하는 명확하게 정의된 인터페이스들을 가지고 있습니다. 반면에, Saga는 종종 시간의 개념을 가지고 있으며 이벤트 처리 과정의 일부로 다른 콤포넌트들과 연동할 수 있습니다. Axon Framwork의 테스트 지원 모듈을 통해 Saga에 대한 테스트를 작성할 수 있습니다. 
 
+각각의 테스트 픽스쳐는 이전 장에서 설명한 명령 처리 콤포넌트와 유사한 세단계를 포함하고 있습니다.
 
+* given: 주어진 이미 발생한 특정 이벤트 들이 있다,(특정 aggregate로 부터 발생한 이벤트)
+* when: 이벤트가 도착했거나 시간이 경과하였을때,
+* expect: 특정 기대 행위 혹은 상태가 되어야 한다.
 
+"given"과 "when" 단계들 모두 연동의 일부분으로 이벤트를 받습니다. "given" 단계 동안, 가능한 경우 생성된 명령들과 같은 모든 부작용(side-effect)들은 무시됩니다. 반면 "when" 단계 동안, Saga로부터 발생된 이벤트들과 명령들은 기록되고 확인 할 수 있습니다.
 
+다음의 코드 예제를 통해 송장에 대한 결제가 30일 이내에 이루어 지지 않았을때 통지를 보내는 saga를 테스트 하기 위한 테스트 픽스쳐의 사용법을 확인 할 수 있습니다.
 
+```
+FixtureConfiguration fixture = new SagaTestFixture(InvoicingSaga.class);
+fixture.givenAggregate(invoiceId).published(new InvoiceCreatedEvent())
+		.whenTimeElapses(Duration.ofDays(31))
+		.expectDispatchedCommandsMatching(
+			Matchers.listWithAllOf(
+				aMarkAsOverdueCommand()
+			)
+		);
+		
+		// 혹은 명령 메세지의 페이로드만 일치하는지 검증할 수 있습니다.
+		.expectDispatchedCommandsMatching(
+			Matchers.payloadsMatching(
+				Matchers.listWithAllOf(
+					aMarkAsOverdueCommand()
+				)
+			)
+		);
+```
+
+Saga들은 명령 처리 결과을 받으면 실행되는 콜백(callback)을 사용하여 명령을 전송할 수 있습니다.  테스트 상에서 실제로 완료되는 명령 처리는 없기 때문에, 명령을 보내는 행위는 ```CallbackBehavior``` 객체를 사용하여 정의합니다. ```CallbackBehavior``` 객체는 ```setCallbackBehavior()``` 메서드를 통해 픽스쳐에 등록하고 명령이 전달될때 콜백을 호출해야 하는지 여부 및 그 방법에 대해 정의 합니다. ```CallbackBehavior```는 커맨드 버스가 콜백 메서드와 함께 전송된 명령을 받았을 때 호출이 되며 ```CallbackBehavior```의  ```handle``` 메서드의 반환 값은 해당 콜백의 ```onSuccess``` 메서드를 호출할때 사용이 됩니다.
+
+```CommandBus```를 직접 사용하지 않고, ```CommandGateWay```를 사용할 수 있습니다. 사용법은 아래를 참조 하면 됩니다.
+
+종종, Saga들은 자원들을 필요로 합니다. 해당 자원들은 Saga 상태의 일부분이 아니지만, Saga가 생성되거나 로딩된 후에 주입됩니다. 테스트 픽스쳐를 통해  Saga가 필요로 하는 자원을 등록할 수 있습니다. 자원을 등록하기 위해서는, 등록할 자원을 인자로 주어 ```fixture.registerResource(Object)``` 메서드를 호출하면 테스트 픽스쳐는 적당한 setter 메서드 혹은 ```@Inject``` 애노테이션 필드를 찾아 호출하여 해당 자원을 주입합니다. 
+
+> Tip
+> Mockito 혹은 Easymock과 같은 Mock 객체들을 Saga의 자원으로 주입하여 사용하면 외부 자원과 Saga간의 연동이 제대로 이루어 지는지를 확인 할 수 있습니다.
+
+```CommandGateWay```는 Saga로 하여금 명령을 보다 더 쉽게 전송할 수 있도록 해줍니다. 재정의한 커맨드 게이트웨이를 사용하면, 테스트 상에서 사용할 mock 혹은 stub 객체를 보다 쉽게 만들어 사용할 수 있습니다. 하지만 mock 혹은 stub를 제공할때, 실제 명령이 전달되지 않아 테스트 픽스쳐를 통해 전송된 명령을 확인할 수 없게 됩니다. 그러므로 테스트 픽스쳐가 제공하는 ```registerCommandGateway(Class)```와 ```registerCommandGateway(Class, stubImplementation)``` 메서드를 통해 커맨드 게이트웨이 객체를 등록하고 선택적으로 커맨드 게이트웨이의 행위를 정의하는 mock(혹은 stub)을 허용하는 방법을 사용해야 합니다. 두 메서드 모두 사용할 게이트웨이를 나타내는 주어진 클래스의 인스턴스를 반환합니다. 이 반환된 인스턴스를 또한 자원으로 등록할 수 있고 등록된 인스턴스는 주입하여 사용할 수 있습니다.
+
+게이트웨이를 등록하기 위해 ```registerCommandGateway(Class)```메서드를 사용하면, 픽스쳐가 관리하는 커맨드 버스에 명령을 전달합니다. 게이트웨이의 행위는 대부분 픽스쳐상에 정의된 ```CallbackBehavior```에 의해 정의됩니다. 만약 명시적인 ```CallbackBehavior```가 주어지지 않는다면, 콜백들은 호출되지 않으므로 게이트웨이에 대한 어떤 반환 값도 제공되지 않습니다.
+
+게이트웨이를 등록하기 위해 ```registerCommandGateway(Class, stubImplementation)```메서드를 사용할때, 두번째 매개변수는 게이터웨이의 동작을 정의하는데 사용됩니다. 
+
+테스트 픽스쳐는 가능하면 시스템 시간이 오래 걸리는 것을 제거하려고 합니다. 다시 말해, ```whenTimeElapses() ``` 메서드를 사용하여 명시적으로 선언하지 않는 한, 테스트 실행 동안 시간이 경과하지 않는 것처럼 보입니다. 모든 이벤트들은 테스트 픽스쳐가 생성된 시점의 타임 스탬프를 가지고 있습니다.
+
+테스트 동안 시간을 멈춰 놓으면, 예정에 맞춰 언제 이벤트가 게시될지 더 쉽게 예측할 수 있습니다. 만약 30초 이내에 게시될 예정인 이벤트를 검증하는 테스트가 있다면, 실제 예정과 테스트 실행간에 걸리는 시간에 상관없이 30초가 걸릴 것입니다.
+
+> Note
+> 픽스쳐는 이벤트를 계획하고 시간을 앞당기는 등의 시간에 기반한 활동을 위해 ```StubScheduler```를 사용합니다. 픽스쳐는 Saga 인스턴스에 보내진 모든 이벤트의 타임 스탬프를 ```StubScheduler```의 시간으로 설정 할 것입니다. 
+> 즉, 시간은 픽스쳐가 시작하게 되면 '멈춰진' 상태가 되고, ```whenTimeAdvanceTo```와 ```whenTimeElapses``` 메서드를 사용하여 결정적으로 시간을 앞당겨 집니다.
+
+특정 시점에 발생될 이벤트를 테스트 해야 한다면, 테스트 픽스쳐에 독립적인 ```StubEventScheduler```를 사용할 수 있습니다. ```EventScheduler```의 구현체인 ```StubEventScheduler```를 통해 어떤 이벤트가 어느 시간으로 예정이 되어 있는지를 검증할 수 있고 시간의 경과를 조작할 수 있는 옵션들을 사용할 수 있습니다. 특정 ```기간(Duration)```만큼 시간을 앞당겨 특정 날짜와 시간으로 조정하거나 다음에 예정된 이벤트로 시간을 앞당길 수 있습니다. 이 모든 작업은 진행된 일정내의 예정된 이벤트들을 반환합니다.
+
+## Command Dispatching
+// TODO - continue
 
 
 ## Glossary
