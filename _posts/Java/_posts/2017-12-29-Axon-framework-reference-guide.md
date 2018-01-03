@@ -5,9 +5,9 @@ date: 2017-12-30 09:36:55
 tags: [Java, Axon, Axon-framework, CQRS]
 categories: [Java, Axon, CQRS]
 ---
-
 * TOC
 {:toc}
+
 
 # Axon framework
 ## Introduction
