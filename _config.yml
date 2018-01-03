@@ -91,12 +91,12 @@ social:
     desc: Connect with me on LinkedIn
     share: true
 
-  - name: Tumblr
-    icon: tumblr
+  - name: StackOverFlow
+    icon: stack-overflow
     username:
-    url:
-    desc: Follow me on Tumblr
-    share: false
+    url: https://stackoverflow.com/users/4763681/yoonyoul-yoo?tab=profile
+    desc:
+    share: true
 
 # Social sharing protocols
 # These are for automatically generating sharing metadata for FB and Twitter
