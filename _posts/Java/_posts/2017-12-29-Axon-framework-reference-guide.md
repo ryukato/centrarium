@@ -1203,8 +1203,159 @@ Command Gateway를 사용하기 위한 두가지 방법 중, 첫번째 방법은
 
 ```CommandCallback```은 각각의 전송된 명령에 대해 호출이 됩니다. 명령의 타입에 상관없이, 게이트 웨이를 통해 전송되는 모든 명령에 대해 일반적인 기능을 수행할 수 있습니다.
 
-### Creating a Custom Command Gateway
+### Creating a Custom Command Gateway, Command Gateway 재정의 하기
+Command Gateway를 재정의한 인터페이스를 사용할 수 있습니다. 인터페이스에 정의된 각각의 메서드들은 메서드의 매개변수, 반환 타입 그리고 선언된 예외 사항으로 어떤 기능을 하는지 알 수 있습니다. 인터페이스로 선언된 게이트웨이를 사용하면 사용의 간편성뿐만 아니라 mock을 사용하여 테스트를 보다 쉽게 진행할 수 있도록 해줍니다.
+
+다음을 통해 매개변수들이 Command Gateway의 기능(행위)에 어떤 영향을 미치는지 살펴보겠습니다.
+
+* 첫번째 매개변수는 전달될 실제 명령 객체이어야 합니다.
+* ```@MetadataValue``` 애노테이션이 사용된 매개변수의 값은 애노테이션 매개변수로 전달된 식벽자를 통해 메타데이터 필드에 할당이 됩니다.
+* ```MetaData``` 타입의 매개변수는 커멘드 메세지(CommandMessage)의 ```MetaData```와 합쳐지게 되며, 동일한 키를 가지는 항목은 이후에 정의된 메타 데이터 항목으로 덮어 쓰게 됩니다.
+* ```CommandCallback``` 타입의 매개변수는 명령 처리 이후 호출되는 ```onSuccess``` 혹은 ```onFailure``` 메서드를 가집니다. 하나 이상의 콜백을 전달할 수 있으며, 반환 값과 함께 결합되어 처리 됩니다. 이 경우, 콜백의 호출은 항상 반환값(혹은 예외)과 일치하게 됩니다. (//TODO - 호출에 필요한 매개변수로 반환값을 사용하는 것으로 생각됨)
+* 마지막 두개의 매개변수들은 각각 ```long```(혹은 ```int```) 그리고 ```TimeUnit``` 타입일 것입니다. 이 경우, 매개변수들이 나타내는 시간동안 해당 메서드는 블럭킹되어 메서드가 완료될때까지 대기합니다. 타임아웃 발생 시에 대한 반응 및 처리는 메서드에 선언된 예외에 따라 달라지게 됩니다. 메서드의 다른 속성들이 블럭킹을 방지하게 되면, 타임아웃은 절대 발생하지 않습니다.
+
+메서드에 선언된 반환 타입 또한 아래와 같이 메서드의 행위에 영향을 미칩니다.
+
+* ```Void```반환 타입은 해당 메서드에 타임아웃 혹은 선언된 예외 사항같은 대기해야 한다는 지시가 없다면, 해당 메서드가 즉시 반환하도록 합니다.
+* ```Future```, ```CompletionStage``` 그리고 ```CompletableFuture```의 반환 타입은 메서드가 즉시 반환 되도록 합니다. 메서드가 반환하는 ```CompletableFuture``` 인스턴스를 통해 명령 처리자의 결과에 접근할 수 있습니다. 메서드에 선언된 예외나 타임아웃은 무시됩니다.
+* 다른 반환 타입들을 사용하면, 해다 메서드는 사용 가능한 결과가 나올때까지 블럭킹 되어 결과를 기다리게 됩니다. 결과값은 반환 타입으로 캐스팅되며, 타입이 맞지 않으면 ```ClassCastException```이 발생하게 됩니다.
+
+메서드에 선언된 예외 사항들은 아래와 같은 영향을 미칩니다.
+
+* 명령 처리자(혹은 인터셉터)에서 확인된 예외(checked exception)을 던진다면, 동일한 예외가 해당 메서드에서도 발생 될 것입니다. 만약 해당 예외를 선언하지 않는다면 발생한 예외는 ```RuntimeException```인 ```CommandExecutionException```로 감싸져서 발생하게 됩니다.
+* 타임아웃이 발생하면, 해당 메서드는 ```null```을 기본으로 반환합니다. ```null```을 반환하는 대신, ```TimeoutException```을 선언하여 ```TimeoutException```을 대신 던지도록 할 수 있습니다.
+* 결과를 기다리는 동안 대기 중인 쓰레드가 중단(interrupted)된다면, 해당 메서드는 기본적으로 ```null```을 반환합니다. 이 경우, 쓰레드가 중단된 것을 나타내는 값(interrupted flag)을 해당 쓰레드에 설정합니다. 해당 메서드에 ```InterruptedException```을 선언하여, interrupted flag가 설정되는 것 대신 ```InterruptedException``` 예외를 발생 시킬 수 있습니다. 예외가 발생하였을 경우, interrupted flag 값은 Java specification에 따라 삭제됩니다.
+* 다른 런 타임 예외들를 메서드에 선언하면, API를 사용하는 사용자에게 설명을 주는 것 외에 다른 효과는 없습니다.
+
+마지막으로, 애노테이션들을 사용할 수 있습니다.
+
+* ```@MetaDataValue``` 애노테이션을 사용하여 메타 데이터 값들을 메서드의 인자로 받아 볼 수 있습니다. 메타 데이터의 키값은 애노테이션의 매개변수로 선언하여 사용합니다.
+* ```@Timeout``` 애노테이션을 메서드에 사용하면, 최대 애노테이션에 지정된 시간만큼 메서드는 블럭킹되어 결과를 기다리게 됩니다. 단 메서드에 타임아웃 매개변수를 선언하면 이 애노테이션은 무시됩니다.
+* ```@Timeout```을 클래스에 사용하면,  해당 클래스에 선언된 모든 메서드들에 해당 애노테이션이 적용됩니다. 따라서 클래스의 모든 메서드들은 최대 애노테이션에 지정된 시간만큼 메서드는 블럭킹되어 결과를 기다리게 됩니다. 단 메서드에 선언된 ```@Timeout``` 애노테이션이 우선 적용됩니다.
+
+```
+public interface MyGateway {
+  // 전송하고 잊어버리는 전략입니다.
+  void sendCommand(MyPayloadType command);
+
+  // "userId"라는 메터 데이터를 가지고 10초의 타임아웃을 가지는 메서드입니다.
+  @Timeout(value = 10, unit = TimeUnit.SECONDS)
+  ReturnValue sendCommandAndWaitForAResult(MyPayloadType command,  @MetaDataValue("userId") String userId);
+
+  // 타임아웃이 발생했을때, 예외를 던지는 메서드입니다.
+  @Timeout(value = 10, unit = TimeUnit.SECONDS)
+  ReturnValue sendCommandAndWaitForAResult(MyPayloadType command) throws TimeoutException,  InterruptedException;
+
+  // 아래의 메서드를 호출하는 client가 timeout 값을 지정합니다.
+  void sendCommandAndWaitForAResult(MyPayloadType command, long timeout, TimeUnit unit) throws TimeoutException, InterruptedException;
+}
+
+// 게이트웨이 설정
+CommandGatewayFactory factory = new CommandGatewayFactory(commandBus);
+
+// commandBus는 'configurer.buildConfiguration()' 메서드가 반환하는 Configuration객체를 통해 얻을 수 있습니다.
+MyGateway myGateway = factory.createGateway(MyGateway.class);
+```
+
+## The Command Bus, 커맨드 버스
 // TODO - continue
+### Dispatching commands
+### SimpleCommandBus
+### AsynchronousCommandBus
+### DisruptorCommandBus
+## Command Interceptors
+### Message Dispatch Interceptors
+#### Structural validation
+### Message Handler Interceptors
+## Distributing the Command Bus
+### JGroupsConnector
+### Spring Cloud Connector
+#### Spring Cloud Http Back Up Command Router
+## Event Publishing & Processing
+### Publishing Events
+### Event Bus
+### Event Processors
+#### Assigning handlers to processors
+#### Configuring processors
+##### Event Handlers
+##### Sagas
+#### Token Store
+#### Parallel Processing
+##### Multi-node processing
+### Distributing Events
+#### Spring AMQP
+##### Forwarding events to an AMQP Exchange
+##### Reading Events from an AMQP Queue
+### Asynchronous Event Processing
+
+## Query Dispatching
+## Query Gateway
+## Query Bus
+### Simple Query Bus
+## Query Interceptors
+### Dispatch Interceptors
+#### Structural validation
+### Handler Interceptors
+
+## Repositories and Event Store
+### Standard repositories
+## Event Sourcing repositories
+## Event Store implementations
+### JPA Event Storage Engine
+### JDBC Event Storage Engine
+### MongoDB Event Storage Engine
+## Event Store Utilities
+### Combining multiple Event Stores into one
+### Filtering Stored Events
+### In-Memory Event Store
+
+## Influencing the serialization process
+### Serializing Events vs 'the rest'
+
+## Event Upcasting
+### Provided abstract upcaster implementations
+### Writing an upcaster
+### Content type conversion
+
+## Snapshotting
+### Creating a snapshot
+### Storing Snapshot Events
+### Initializing an Aggregate based on a Snapshot Event
+
+## Advanced conflict detection and resolution
+
+## Spring Boot AutoConfiguration
+### Event Bus and Event Store Configuration
+### Command Bus Configuration
+### Query Bus Configuration
+### Transaction Manager Configuration
+### Serializer Configuration
+### Aggregate Configuration
+### Saga Configuration
+### Event Handling Configuration
+### Query Handling Configuration
+#### Parallel processing
+### Enabling AMQP
+### Distributing commands
+#### Using JGroups
+#### Using Spring Cloud
+
+## Advanced Customizations
+### Parameter Resolvers
+### Meta Annotations
+### Customizing Message Handler behavior
+
+## Performance Tuning
+### Database Indexes and Column Types
+#### SQL Databases
+### MongoDB
+### Caching
+### Snapshotting
+### Event Serializer tuning
+#### XStream Serializer
+#### Preventing duplicate serialization
+#### Different serializer for Events
+### Custom Identifier generation
 
 
 ## Glossary
