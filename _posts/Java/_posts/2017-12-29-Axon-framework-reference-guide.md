@@ -1195,11 +1195,11 @@ Command Gateway를 사용하기 위한 두가지 방법 중, 첫번째 방법은
 다른 방법은 가장 유연한 방법으로, ```CommandGateWayFactory```를 사용하여 거의 모든 인터페이스를 Command Gateway로 변경할 수 있는 방법입니다. 정확한 타입 정보와 비지니스 관련 예외를 사용하여 정의된 애플리케이션 인터페이스를 정의하여, Axon을 통해 해당 인터페이스를 런타임(실행 시점)에 자등으로 해당 인터페이스에 대한 구현체를 생성할 수 있습니다.
 
 ### Configuring and Command Gateway
-사용자 정의 게이트웨이와 Axon에서 제공되는 게이트웨이 모두 커맨드 버스(command bus)에 접근 할 수 있도록 설정이 필요합니다. 또한, 커맨드 게이트웨이는 ```RetryScheduler```, ```CommandDispatchIntercepter``` 그리고 ```CommandCallback```을 통한 설정을 해야 합니다.
+사용자 정의 게이트웨이와 Axon에서 제공되는 게이트웨이 모두 커맨드 버스(command bus)에 접근 할 수 있도록 설정이 필요합니다. 또한, 커맨드 게이트웨이는 ```RetryScheduler```, ```CommandDispatchInterceptor``` 그리고 ```CommandCallback```을 통한 설정을 해야 합니다.
 
 ```RetryScheduler```을 통해 명령 실행이 실패했을 경우, 명령 처리에 대한 재시도에 대한 스케쥴링을 할 수 있습니다. ```RetryScheduler```의 구현체인 ```IntervalRetryScheduler```를 통해, 명령 처리가 성공할때까지 일정한 간격으로 주어진 명령 처리를 재시도 하거나, 최대 재시도 횟수 만큼 명령을 처리를 재차 시도 할 수 있습니다. 하지만 일시적인 예외가 아닌 예외 사항으로 명령 처리에 실해한 경우에는 재시도는 이루어 지지 않습니다. ```RetryScheduler```는 명령 처리가 ```RuntimeException```으로 실패한 경우에만 호출됩니다. 확인된 예외(Checked exceptions)는 "비지니스 예외"로 간주되어 절대 재시도를 하지 않습니다. 분산 환경에서 커맨드 버스를 사용하여 명령 처리를 할때 주도 ```RetryScheduler```를 사용합니다. 한 노드가 실패했을때, ```RetryScheduler```를 사용하여 다른 사용 가능한 노드로 해당 명령을 분산하여 명령이 처리될 수 있도록 조치합니다. (참조: [분산 커맨드 버스](// TODO - link update))
 
-```CommandDispatchIntercepter```를 통해, 커맨드 버스로 명령이 전달되기 전에 명령 메세지(```CommandMessage```)를 변경할 수 있습니다. ```CommandDispatchInterceptor```는 ```CommandBus```에 설정이 되지만, 메세지들이 게이트웨이를 통해서 전달이 되는 경우에만 설정된 인터셉터들은 호출됩니다. 예를 둘어, 인터셉터들을 사용하여 메타 데이터를 추가하거나 검증을 수행할 수 있습니다.
+```CommandDispatchInterceptor```를 통해, 커맨드 버스로 명령이 전달되기 전에 명령 메세지(```CommandMessage```)를 변경할 수 있습니다. ```CommandDispatchInterceptor```는 ```CommandBus```에 설정이 되지만, 메세지들이 게이트웨이를 통해서 전달이 되는 경우에만 설정된 인터셉터들은 호출됩니다. 예를 둘어, 인터셉터들을 사용하여 메타 데이터를 추가하거나 검증을 수행할 수 있습니다.
 
 ```CommandCallback```은 각각의 전송된 명령에 대해 호출이 됩니다. 명령의 타입에 상관없이, 게이트 웨이를 통해 전송되는 모든 명령에 대해 일반적인 기능을 수행할 수 있습니다.
 
@@ -1258,10 +1258,23 @@ MyGateway myGateway = factory.createGateway(MyGateway.class);
 ```
 
 ## The Command Bus, 커맨드 버스
-// TODO - continue
+커맨드 버스(Command Bus)는 각각의 명령 처리자에게 명령들을 전달하기 위한 메커니즘을 말합니다. 각각의 명령은 정확히 하나의 명령 처리자에게 전달됩니다. 만약 명령을 처리할 처리자가 없다면, ```NoHandlerForCommandException```이 발생합니다. 동일한 명령 타입에 대해 다수의 명령 처리자를 등록하게 되면, 마지막에 등록한 명령 처리자가 등록되어 해당 명령을 처리하게 됩니다.
+
 ### Dispatching commands
+```CommandBus```는 각각의 처리자에게 명령을 전달하기 위한 두개의 메서드를 제공합니다. 해당 메서드들은 ```dispatch(commandMessage, callback)```과 ```dispatch(commandMessage)```이며, 두 메서드의 공통된 매개변수이면서 첫번째 매개변수는 전달될 실제 명령을 포함하고 있습니다. 선택적인 두번째 매개변수로 전달되는 콜백 객체는 명령 처리가 완료되면 명령을 전송한 콤포넌트에 완료 여부를 알리는 용도로 사용할 수 있습니다. 해당 콜백은 명령 처리가 정상적으로 처리되었을 때 호출되는 ```onSuccess```와 예외 발생 등의 상황에서 호출되는 ```onFailure``` 두개의 메서드를 가집니다.
+
+명령이 전달되는 쓰레드와 콜백이 호출되는 쓰레드는 다를 수 있기 때문에, 호출하는 쓰레드가 다음 로직을 진행하기 전에 결과를 원한다면, ```FutureCallback```을 사용하여 처리할 수 있습니다. ```FutureCallback```은 Java의 ```java.concurrent``` 패키지에 정의되어 있는 ```Future```와 Axon에서 제공하는 ```CommandCallback```의 조합입니다. 다른 대안으로는 커맨드 게이트웨이의 사용을 생각해 볼 수 있습니다. 만약 명령 처리의 결과에 관심이 없다면, ```dispatch(commandMessage)``` 메서드를 사용하면 됩니다.
+
 ### SimpleCommandBus
+```SimpleCommandBus```는 이름에서 알 수 있듯이, 가장 간단한 ```CommandBus```의 구현체입니다. 명령들을 전송하는 쓰레드에서 곧장 명령들을 처리합니다. 명령이 처리되고 난후에, 변경된 aggregate(들)은 저장되고 발생된 이벤트들은 동일한 쓰레드에서 게시 됩니다. 웹 애플리케이션과 같은 대부분의 경우에 ```SimpleCommandBus```만으로도 충분하며, 설정 API에서 기본적으로 사용되는 구현체이기도 합니다.
+
+다른 대부분의  ```CommandBus``` 구현체들처럼, ```SimpleCommandBus```에도 인터셉터(interceptor)들을 설저할 수 있습니다. ```CommandDispatchInterceptor```는 커맨드 버스에서 명령이 전송될때 호출이 됩니다. 실제 명령 처리자 메서드를 호출하기전에 ```CommandDispatchInterceptor```를 호출합니다. 따라서 해당 명령을 변경하거나 전송되지 않도록 처리할 수 있습니다. 상세 내용은 [Command Interceptors](#Command Interceptors)를 참조하세요.
+
+모든 명령 처리가 동일한 쓰레드내에서 이루어 지기 때문에, JVM의 한도내에서 작동하게 됩니다. ```SimpleCommandBus```의 성능은 좋지만, 뛰어난 정도는 아닙니다. JVM의 한도를 넘어서거나 CPU 싸이클을 최대한 활용하려면, 다른 ```CommandBus```의 구현체를 확인해 보세요.
+
 ### AsynchronousCommandBus
+// TODO - continue
+
 ### DisruptorCommandBus
 ## Command Interceptors
 ### Message Dispatch Interceptors
