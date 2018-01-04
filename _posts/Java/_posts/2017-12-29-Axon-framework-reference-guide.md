@@ -1268,14 +1268,34 @@ MyGateway myGateway = factory.createGateway(MyGateway.class);
 ### SimpleCommandBus
 ```SimpleCommandBus```는 이름에서 알 수 있듯이, 가장 간단한 ```CommandBus```의 구현체입니다. 명령들을 전송하는 쓰레드에서 곧장 명령들을 처리합니다. 명령이 처리되고 난후에, 변경된 aggregate(들)은 저장되고 발생된 이벤트들은 동일한 쓰레드에서 게시 됩니다. 웹 애플리케이션과 같은 대부분의 경우에 ```SimpleCommandBus```만으로도 충분하며, 설정 API에서 기본적으로 사용되는 구현체이기도 합니다.
 
-다른 대부분의  ```CommandBus``` 구현체들처럼, ```SimpleCommandBus```에도 인터셉터(interceptor)들을 설저할 수 있습니다. ```CommandDispatchInterceptor```는 커맨드 버스에서 명령이 전송될때 호출이 됩니다. 실제 명령 처리자 메서드를 호출하기전에 ```CommandDispatchInterceptor```를 호출합니다. 따라서 해당 명령을 변경하거나 전송되지 않도록 처리할 수 있습니다. 상세 내용은 [Command Interceptors](#Command Interceptors)를 참조하세요.
+다른 대부분의 ```CommandBus``` 구현체들처럼, ```SimpleCommandBus```에도 인터셉터(interceptor)들을 설저할 수 있습니다. ```CommandDispatchInterceptor```는 커맨드 버스에서 명령이 전송될때 호출이 됩니다. 실제 명령 처리자 메서드를 호출하기전에 ```CommandDispatchInterceptor```를 호출합니다. 따라서 해당 명령을 변경하거나 전송되지 않도록 처리할 수 있습니다. 상세 내용은 [Command Interceptors](#Command Interceptors)를 참조하세요.
 
 모든 명령 처리가 동일한 쓰레드내에서 이루어 지기 때문에, JVM의 한도내에서 작동하게 됩니다. ```SimpleCommandBus```의 성능은 좋지만, 뛰어난 정도는 아닙니다. JVM의 한도를 넘어서거나 CPU 싸이클을 최대한 활용하려면, 다른 ```CommandBus```의 구현체를 확인해 보세요.
 
 ### AsynchronousCommandBus
-// TODO - continue
+  이름에서 알수 있듯이, ```AsynchronousCommandBus```는 ```CommandBus``` 의 또 다른 구현체로, 명령을 발송하는 쓰레드로부터 비동기적으로 명령을 처리합니다. ```AsynchronousCommandBus```는 ```Executor```를 사용하여 실제 명령 처리 로직을 다른 쓰레드 상에서 처리합니다.
+
+  기본적으로, ```AsynchronousCommandBus```는 개수 제한이 없는 캐쉬 기반의 쓰레드 풀(pool)을 사용합니다. 즉, 한 명령이 발송될때 하나의 쓰레드가 생성이 되며, 명령 처리를 완료한 쓰레드는 새로운 명령들을 처리하기위해 다시 재 사용됩니다. 그리고 60초 동안 아무런 명령을 처리하지 않았다면 쓰레드들은 멈추게 됩니다.
+
+  다른 방법으로, 다른 쓰레드 전략을 가지는 ```Executor``` 인스턴스를 사용할 수 있습니다.
+
+  주의 할 것은, 명령을 기다리는 모든 쓰레드들을 정상적으로 종료시키기 위해 ```AsynchronousCommandBus```는 애플리케이션이 종료될때 함께 종료되어야 합니다. ```shutdown()``` 메서드를 호출하여 ```AsynchronousCommandBus```를 종료하면 되고 주어진 ```Executor```가 ```ExecutorService```를 구현한 구현체라면, 함께 종료가 됩니다.
 
 ### DisruptorCommandBus
+```SimpleCommandBus```는 수긍할만한 성능 특성을 가지고 있고, 특히 [Performance Tuning](Performance Tuning)의 성능 관련 사항을 살펴보게될때 알 수 있을 것입니다. ```SimpleCommandBus```는 동일한 aggregate에 다수의 쓰레드들이 동시에 접근하는 것을 방지하지 위한 락킹(locking)을 필요로 합니다. 이로 인해 처리 과부하 및 락(lock)을 얻기 위한 경쟁이 발생합니다.
+
+```DisruptorCommandBus```는 다른 다중 쓰레드를 처리 방법을 사용합니다. 다수의 쓰레드들이 동일한 프로세스를 처리하도록 하는 대신, 각각의 쓰레드들이 프로세스의 부분 부분을 처리하도록 합니다. ```DisruptorCommandBus```는 상당히 향상된 성능을 내는 동시성 프로그래밍을 위한 작은 프레임워크인 [Disruptor](http://lmax-exchange.github.io/disruptor/)를 사용합니다. 호출자의 쓰레드에서 프로세스를 처리하는 방법 대신, 프로세스의 각 부분을 담당하는 두 그룹의 쓰레드에 작업을 전달합니다. 첫번째 그룹의 쓰레드는 명령 처리자를 호출하고 aggregate의 상태를 변경합니다. 두번째 그룹은 이벤트들을 저장하고 이벤트 스토어에 이벤트를 게시합니다.
+
+```SimpleCommandBus```에 비해 ```DisruptorCommandBus```는 4!배 만큼 월등한 성능을 내지만, 몇가지 제약 사항들이 있습니다.
+
+* ```DisruptorCommandBus```는 이벤트 소스 기반의 Aggregate만을 지원합니다. 이 커멘트 버스는 디스럽터(disruptor)가 처리하는 aggregate의 저장소와 같은 역활을 합니다. 저장소에 대한 참조 값은 ```createRepository(AggregateFactory)``` 메서드를 사용하면 됩니다.
+* 하나의 명령은 단일 aggregate 인스턴스에 대해서만 상태변경을 할 수 있습니다.
+* 캐쉬를 사용할 경우, 동일한 식별값을 가지는 두개의 다른 유형의 aggregate를 사용할 수 없습니다. 특정 식별자에 대해 오로지 단일의 aggregate만을 허용하기 때문입니다.
+* 커맨드 버스를 통해 처리되는 명령은 일반적으로 작업단위의 롤백이 이루어져야 하는 실패를 발생 시켜서는 안됩니다. 롤백이 이루어질 경우, ```DisruptorCommandBus```는 명령이 전송된 순서와 동일한 순서로 처리되는 것을 보장하지 않습니다. 게다가 불필요한 계산을 필요로 하는 다른 명령들을 다시 시도 해야 합니다.
+* 새로운 Aggregate 인스턴스를 생성할때, 생성된 인스턴스를 갱신하는 명령이 주어진 순서대로 수행되지 않을 수 있습니다. aggregate가 생성되면, 모든 명령은 전달 된 순서대로 정확하게 실행됩니다. 순서대로 처리되도록 보장하려면, aggregate가 생성되기를 기다리도록 하는 콜백을 해당 명령에 사용해야 합니다. 몇 밀리 초안에 끝날 것입니다.
+
+// TODO - continue
+
 ## Command Interceptors
 ### Message Dispatch Interceptors
 #### Structural validation
