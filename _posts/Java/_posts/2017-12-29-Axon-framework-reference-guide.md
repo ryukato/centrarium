@@ -1292,9 +1292,27 @@ MyGateway myGateway = factory.createGateway(MyGateway.class);
 * 하나의 명령은 단일 aggregate 인스턴스에 대해서만 상태변경을 할 수 있습니다.
 * 캐쉬를 사용할 경우, 동일한 식별값을 가지는 두개의 다른 유형의 aggregate를 사용할 수 없습니다. 특정 식별자에 대해 오로지 단일의 aggregate만을 허용하기 때문입니다.
 * 커맨드 버스를 통해 처리되는 명령은 일반적으로 작업단위의 롤백이 이루어져야 하는 실패를 발생 시켜서는 안됩니다. 롤백이 이루어질 경우, ```DisruptorCommandBus```는 명령이 전송된 순서와 동일한 순서로 처리되는 것을 보장하지 않습니다. 게다가 불필요한 계산을 필요로 하는 다른 명령들을 다시 시도 해야 합니다.
-* 새로운 Aggregate 인스턴스를 생성할때, 생성된 인스턴스를 갱신하는 명령이 주어진 순서대로 수행되지 않을 수 있습니다. aggregate가 생성되면, 모든 명령은 전달 된 순서대로 정확하게 실행됩니다. 순서대로 처리되도록 보장하려면, aggregate가 생성되기를 기다리도록 하는 콜백을 해당 명령에 사용해야 합니다. 몇 밀리 초안에 끝날 것입니다.
+* 새로운 Aggregate 인스턴스를 생성할때, 생성된 인스턴스를 갱신하는 명령이 주어진 순서대로 수행되지 않을 수 있습니다. aggregate가 생성되면, 모든 명령은 전달 된 순서대로 정확하게 실행됩니다. 순서대로 처리되도록 보장하려면, aggregate가 생성되기를 기다리도록 하는 콜백을 해당 명령에 사용해야 합니다. 하지만 aggregate는 몇 밀리 초안에 생성되므로 콜백의 처리 또한 짧은 시간안에 이루어 집니다.
 
+```DisruptorCommandBus``` 인스턴스를 생성하기 위해선, ```EventStore```가 필요합니다. ```EventStore```는 [Repositories and Event Store](Repositories and Event Store)에 설명이 되어 있습니다.
+
+특정 환경하에서 성능에 최적화된 설정을 위해 ```DisruptorConfiguration``` 인스턴스를 선택적으로 생성하여 ```DisruptorCommandBus```에 설정할 수 있습니다. 버퍼 크기, 생산자 유형 및 대기 전략 등의 설정 가능한 항목들은 아래와 같습니다.
+
+* 버퍼 크기(Buffer size): 수신 명령을 저장하는 링 버퍼(ring buffer)의 슬랏의 개수를 나타냅니다. 값을 높게 설정하면 출력을 높일 수 있지만, 지연(latency)이 길어질 수 있습니다. 해당 값은 반드시 2의 거듭 제곱근이 되어야 합니다. 기본값은 4096입니다.
+* 생산자 유형(ProducerType): 단일 쓰레드 혹은 다중 쓰레드로 엔트리들을 생성할 지를 결정하는 값입니다. 기본값은 다중 쓰레드로 되어 있습니다.
+* 대기 전략(WaitStrategy): 처리 프로세서 쓰레드들간(세개의 쓰레드가 실제 처리를 담당합니다.) 다른 쓰레드의 작업 처리 동안 어떤 방법으로 대기할지에 대한 전략을 설정할 수 있습니다. 가장 좋은 대기 전략은 사용 가능한 코어의 개수와 진행 중인 다른 프로세스들의 개수에 따라 결정이 됩니다. 낮은 지연 시간이 가장 중요하고 ```DisruptorCommandBus```가 자신을 위한 코어를 요청해야 한다면, ```BusySpinWaitStrategy```를 사용할 수 있습니다. ```DisruptorCommandBus```가 적게 CPU를 사용하고 다른 쓰레드들이 처리할 수 있도록 허용하기 위해선, ```YieldingWaitStrategy```를 사용하세요. 마지막으로 다른 쓰레드들과 공평하게 CPU 사용을 하기 위해서 ```SleepingWaitStrategy```와 ```BlockingWaitStrategy```를 사용 할 수 있습니다. ```BlockingWaitStrategy```는 커맨드 버스가 프로세스 처리를 위해 CPU를 독점적으로 사용하지 않도록 합니다. 기본값은 ```BlockingWaitStrategy```입니다.
+* 익스큐터(Executor): ```DisruptorCommandBus```가 사용할 쓰레드를 제공해주는 ```Executor```를 설정합니다. ```Executor```는 최소한 4개의 쓰레드를 제공해야 하는데, 그중 세개의 쓰레드는 ```DisruptorCommandBus```의 프로세싱 콤포넌트에 할당이 됩니다. 나머지 쓰레드들은 콜백을 호출하고 Aggregate의 상태 변경에 문제가 발생하였을때 재시도를 스케쥴링하기 위한 용도로 사용이 됩니다. "DisruptorCommandBus"의 이름을 가진 쓰레드 그룹으로부터 쓰레드를 제공하는  ```CachedThreadPool```이 기본적으로 사용이 됩니다.
+* 트랜잭션 매니져(TransactionManager): 이벤트의 저장과 게시를 트랜잭션내에서 처리될 수 있도록 하기 위한 트랜잭션 매니져를 정의합니다.
+* 인보커-인터셉터스(InvokerInterceptors): 명령 처리자의 호출 과정에서 사용되는 ```CommandHandlerInterceptor```들을 정의 합니다. 실제 명령 처리자 메서드를 호출하는 과정입니다.
+* 퍼블리셔-인터셉터스(PublisherInterceptors): 발생된 이벤트를 저장하고 게시하는 과정에서 사용되는 ```CommandHandlerInterceptor```들을 정의합니다.
+* 롤백 설정(RollbackConfiguration): 작업 단위를 롤백해야하는 예외들을 정의합니다. 기본적으로 메서드에 정의되지 않은 예외(unchecked exception)에 대해 롤백 처리를 하도록 설정되어 있습니다.
+* 비정상 상태변경 처리를 위한 명령의 리스케쥴링(RescheduleCommandsOnCorruptState): 예를 들어 작업 단위(Unit of Work)가 롤백된 경우와 같이 Aggregate의 상태가 정상적으로 변경되지 않았을때, 이미 처리된 명령을 다시 처리하도록 스케쥴링을 해야 하는지를 결정합니다. ```false```로 값을 설정하면, 콜백의 ```onFailure()``` 메서드가 실행됩니다. 반대로 기본값인 ```true```일 경우, 해당 명령은 다시 처리되도록 스케쥴링 됩니다.
+* 쿨링다운 시간(CoolingDownPeriod): 명령들이 모두 처리될때까지 기다리는 초단위의 시간 값을 설정합니다. 이 시간 동안, 새로운 명령을 받지 않지만, 이미 수신한 명령들은 처리되고 필요에 따라 재처리 되도록 스케쥴링 됩니다. 설정된 시간 동안, 명령에 재처리 스케쥴링과 콜백 호출을 위한 쓰레드들의 사용을 보장합니다. 기본값은 1000(1초)입니다.
+* 캐쉬(Cache): 이벤트 저장소를 통해 복원된 aggregate 인스턴스들을 저장해놓는 캐쉬를 설정합니다. 설정된 캐쉬는 디스럽터(disruptor)가 사용 중이 아닌 aggregate 인스턴스들을 저장합니다.
+* 명령 처리자 호출에 사용되는 쓰레드 개수(InvokerThreadCount):
 // TODO - continue
+
+
 
 ## Command Interceptors
 ### Message Dispatch Interceptors
