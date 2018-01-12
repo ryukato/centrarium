@@ -1281,7 +1281,7 @@ MyGateway myGateway = factory.createGateway(MyGateway.class);
 
   주의 할 것은, 명령을 기다리는 모든 쓰레드들을 정상적으로 종료시키기 위해 ```AsynchronousCommandBus```는 애플리케이션이 종료될때 함께 종료되어야 합니다. ```shutdown()``` 메서드를 호출하여 ```AsynchronousCommandBus```를 종료하면 되고 주어진 ```Executor```가 ```ExecutorService```를 구현한 구현체라면, 함께 종료가 됩니다.
 
-### DisruptorCommandBus
+### 디스럽터 커맨드버스 DisruptorCommandBus
 ```SimpleCommandBus```는 수긍할만한 성능 특성을 가지고 있고, 특히 [Performance Tuning](Performance Tuning)의 성능 관련 사항을 살펴보게될때 알 수 있을 것입니다. ```SimpleCommandBus```는 동일한 aggregate에 다수의 쓰레드들이 동시에 접근하는 것을 방지하지 위한 락킹(locking)을 필요로 합니다. 이로 인해 처리 과부하 및 락(lock)을 얻기 위한 경쟁이 발생합니다.
 
 ```DisruptorCommandBus```는 다른 다중 쓰레드를 처리 방법을 사용합니다. 다수의 쓰레드들이 동일한 프로세스를 처리하도록 하는 대신, 각각의 쓰레드들이 프로세스의 부분 부분을 처리하도록 합니다. ```DisruptorCommandBus```는 상당히 향상된 성능을 내는 동시성 프로그래밍을 위한 작은 프레임워크인 [Disruptor](http://lmax-exchange.github.io/disruptor/)를 사용합니다. 호출자의 쓰레드에서 프로세스를 처리하는 방법 대신, 프로세스의 각 부분을 담당하는 두 그룹의 쓰레드에 작업을 전달합니다. 첫번째 그룹의 쓰레드는 명령 처리자를 호출하고 aggregate의 상태를 변경합니다. 두번째 그룹은 이벤트들을 저장하고 이벤트 스토어에 이벤트를 게시합니다.
@@ -1309,15 +1309,33 @@ MyGateway myGateway = factory.createGateway(MyGateway.class);
 * 비정상 상태변경 처리를 위한 명령의 리스케쥴링(RescheduleCommandsOnCorruptState): 예를 들어 작업 단위(Unit of Work)가 롤백된 경우와 같이 Aggregate의 상태가 정상적으로 변경되지 않았을때, 이미 처리된 명령을 다시 처리하도록 스케쥴링을 해야 하는지를 결정합니다. ```false```로 값을 설정하면, 콜백의 ```onFailure()``` 메서드가 실행됩니다. 반대로 기본값인 ```true```일 경우, 해당 명령은 다시 처리되도록 스케쥴링 됩니다.
 * 쿨링다운 시간(CoolingDownPeriod): 명령들이 모두 처리될때까지 기다리는 초단위의 시간 값을 설정합니다. 이 시간 동안, 새로운 명령을 받지 않지만, 이미 수신한 명령들은 처리되고 필요에 따라 재처리 되도록 스케쥴링 됩니다. 설정된 시간 동안, 명령에 재처리 스케쥴링과 콜백 호출을 위한 쓰레드들의 사용을 보장합니다. 기본값은 1000(1초)입니다.
 * 캐쉬(Cache): 이벤트 저장소를 통해 복원된 aggregate 인스턴스들을 저장해놓는 캐쉬를 설정합니다. 설정된 캐쉬는 디스럽터(disruptor)가 사용 중이 아닌 aggregate 인스턴스들을 저장합니다.
-* 명령 처리자 호출에 사용되는 쓰레드 개수(InvokerThreadCount):
+* 명령 처리자 호출 쓰레드 개수(InvokerThreadCount) : 명령 처리자를 호출하는데 사용되는 쓰레드의 개수를 말합니다. 해당 장비 CPU의 코어 개수의 반이 적절한 시작 값입니다.
+* 이벤트 게시 쓰레드 개수(PublisherThreadCount): 이벤트를 게시하는데 사용되는 쓰레드의 개수를 설정 할 수 있습니다. 해당 장비 CPU의 코어 개수의 반이 적절한 시작 값이며, IO 비용이 많이 든다면 해당 값을 증가 시킬 수 있습니다.
+* 직렬화 쓰레드 개수(SerializerThreadCount): 이벤트를 사전-직렬화하는데 사용되는 쓰레드의 개수를 의미하며, 기본값은 1입니다. 만약 serializer가 설정이 되어 있지 않다면 해당 값은 무시됩니다.
+* 직렬화 객체(Serializer): 이벤트를 직렬화하는 객체입니다. Serializer를 설정하면, ```DisruptorCommandBus```는 ```SerializationAware``` 메세지로 생성된 모든 이벤트를 포함시켜 버립니다. 페이로드 및 메타 데이터는 직렬화된 형식으로 게시되기 전 이벤트 저장소에 저장됩니다.
+
+## 커멘드 인터셉터, Command Interceptors
+커맨드 버스를 사용하면 명령의 유형에 상관없이 모든 수신 명령들에 대해 로깅 및 인증과 같은 작업을 처리할 수 있습니다. 인터셉터(Interceptor) 이런 작업들을 처리할 수 있습니다.
+
+Dispatch Interceptor와 Handler Interceptor들과 같이 다른 유형의 인터셉터가 있습니다. Dispatch Interceptor는 명령 처리자로 전달되기 전의 명령들을 처리할 수 있습니다. 이때, 명령 처리자가 호출되기 전에는, 해당 명령에 대한 처리자가 있는지는 확신 할 수 없습니다.
+
+### Message Dispatch Interceptors
+메세지 게시 인터셉터(Message Dispatch Interceptor)들은 커맨드 버스로 명령이 전달될때 호출이 됩니다. 메세지 게시 인터셉터를 통해 메타 데이터의 추가와 같은 명령 메세지 변경을할 수 있고 예외를 발생 시켜 명령이 전달되는 것을 막을 수 있습니다. 메세지 게시 인터셉터들은 명령을 전달하는 쓰레드와 동일한 쓰레드에서 항상 호출이 됩니다.
+
+#### 구조적 검증, Structural validation
+필요한 모든 정보가 올바른 형식으로 되어 있지 않다면 명령은 처리되지 않습니다. 사실, 필요한 정보가 누락된 명령은 가급적 트랜잭션이 시작되기전에 처리되지 않도록 최대한 빨리 막는 것이 좋습니다. 따라서, 인터셉터를 통해 명령이 필요한 모든 정보를 포함하고 있는지 확인 해야 하며, 이를 구주적 검증이라고 합니다.
+
+Axon Framework은 JSR 303 Bean Validation 기반 검증을 지원합니다. ```@NotEmpty``` 그리고 ```@Pattern```과 같은 애노테이션을 사용하여 명령의 필드를 검증할 수 있습니다. Hibernate-Validator와 같은 JSR 303 구현체를 클래스 패스에 추가해야 합니다. 그런 후에, ```BeanValidationInterceptor```를 커맨드 버스에 설정하면 자동으로 검증 대상을 찾고 설정하게 됩니다. 합리적인 기본값을 사용하지만, 필요에 따라 조정할 수 있습니다.
+
+> Tip
+> 부적합한 명령을 처리하는데 최소한의 자원을 사용하길 원할 것입니다. 그러므로, ```BeanValidationInterceptor```를 인터셉터 체인의 맨 앞에 위치 시켜야 합니다.
+> 몇몇의 경우에, 로깅 혹은 감사(auditing) 인터셉터를 맨 앞에 위치시켜야 한다면, ```BeanValidationInterceptor```를 바로 그 다음에 위치 시켜야 합니다.
+
+```BeanValidationInterceptor```는 ```MessageHandlerInterceptor```의 구현체이기도 합니다. 따라서 핸들러 인터셉터로도 설정이 가능합니다.
+
+### Message Handler Interceptors
 // TODO - continue
 
-
-
-## Command Interceptors
-### Message Dispatch Interceptors
-#### Structural validation
-### Message Handler Interceptors
 ## Distributing the Command Bus
 ### JGroupsConnector
 ### Spring Cloud Connector
