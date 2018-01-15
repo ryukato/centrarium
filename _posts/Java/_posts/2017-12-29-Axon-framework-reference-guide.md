@@ -1334,10 +1334,38 @@ Axon Framework은 JSR 303 Bean Validation 기반 검증을 지원합니다. ```@
 ```BeanValidationInterceptor```는 ```MessageHandlerInterceptor```의 구현체이기도 합니다. 따라서 핸들러 인터셉터로도 설정이 가능합니다.
 
 ### Message Handler Interceptors
-// TODO - continue
+메세지 처리 인터셉터는 명령 처리 이전과 이후에 특정 작업을 수행할 수 있도록 합니다. 메세지 처리 인터셉터는 예를 들어, 보안 문제등과 같은 이유로 명령이 처리되는 것을 막을 수 있습니다.
+
+메세지 처리 인터셉터는 ```MessageHandlerInterceptor```의 구현체이며, ```handle``` 메서드를 구현하고 있습니다. ```handle```메서드는 명령 메세지, 현재의 작업단위(UnitOfWork) 그리고 ```InterceptorChain```을 매개변수로 받습니다. ```InterceptorChain``` 매개변수는 명령 전달을 계속할지 말지를 결정하는데 사용이 됩니다.
+
+메세지 게시 인터셉터와는 달리, 메세지 처리 인터셉터는 명령 처리 컨텍스트 내에서 호출이 됩니다. 즉, 예를 들어 작업 단위에서 처리되는 메세지와 상관있는 데이터를 첨부할 수 있습니다. 이 상관 데이터는 동일 작업 단위의 컨텍스트에서 생성되는 메세지들에 첨부 됩니다.
+
+메세지 처리 인터셉터는 또한 명령 처리를 위한 트랜잭션을 관리하기 위해 사용이 되며, 이를 위해 ```TransactionManagingInterceptor```를 등록해야 합니다. ```TransactionManagingInterceptor```는 ```TransactionManager```와 함께 구성이 되어 실제 트랜잭션을 시작하고 커밋(혹은 롤백)을 처리하게 됩니다.
 
 ## Distributing the Command Bus
+이전에 설명한 ```CommandBus``` 구현체들은 단일 JVM내에서 명령 메세지를 전달할 수 있는 구현체들입니다. 때때로, 다른 JVM상에서 작동하는 다수의 커맨드 버스들을 하나의 커맨드 버스처럼 작동하도록 해야 할 경우가 있습니다. 한 JVM상의 커맨드 버스로 전달된 명령은 다른 JVM상의 명령 처리자로 전달되어야 하며 결과는 반환되어야 합니다.
+
+위와 같은 경우를 처리하기 위해 ```DistributedCommandBus```를 사용합니다. 다른 ```CommandBus``` 구현체들과는 달리, ```DistributedCommandBus```는 어떤 명령 처리자도 호출하지 않고, 다른 JVM상의 커맨드 버스들을 어려 이어주는(bridge) 역활을 할 뿐입니다. 각각의 JVM상에서 동작하는 ```DistributedCommandBus```의 개별 인스턴스를 "세그먼트(Segment)"라고 합니다.
+
+![](/assets/axon/distributed_command_bus.png)
+
+> Note
+> 분산 처리가 가능한 커맨드 버스는 Axon Framework의 핵심 모듈의 일부분이긴 하지만, ```axon-distributed-commandbus-...``` 모듈 중 하나의 모듈의 콤포넌트들을 필요로 합니다.
+> 메이븐을 사용할 경우, 필요한 의존성들을 설정해야 합니다. 핵심 모듈과 동일한 그룹 아이디(groupId)와 버전을 사용해야 합니다.
+
+```DistributedCommandBus```는 두개의 콤포넌트를 필요로 합니다. 하나는 JVM간 통신 프로토콜을 구현한 ```CommandBusConnector```이고, 다른 하나는 수신된 명령을 분배하는 ```CommandRouter```입니다. 커맨드 라우터(CommandRouter)는 라우팅 전략(Routing Strategy)에 의해 계산된 라우팅 키(Routing Key)에 기반하여, 분산 처리 커맨드 버스의 어느 세그먼트로 처리할 명령을 보낼지를 결정합니다. 세그먼트의 개수와 설정이 변경되지 않는한, 동일한 라우팅 키를 가지는 두개의 명령들을 항상 동일한 세그먼트로 가게 됩니다. 일반적으로, 대상 aggregate의 식별값이 라우팅 키로 사용이 됩니다.
+
+```RoutingStrategy```의 두 구현체로 라우팅 키를 찾기 위해 커맨드 메세지의 메타 데이터 속성을 사용하는 ```MetaDataRoutingStrategy```와 라우팅 키를 뽑아내기 위해 명령 메세지의 페이로드에 사용된 ```@TargetAggregateIdentifier```를 기반으로 작동하는 ```AnnotationRoutingStrategy```가 있습니다.
+
+기본적으로, ```RoutingStrategy```의 구현체들은 명령 메세지로부터 라우팅 키를 찾지 못하면 예외를 발생 시킵니다. 하지만 ```MetaDataRoutingStrategy``` 혹은 ```AnnotationRoutingStrategy```의 생성자에 ```UnresolvedRoutingKeyPolicy```를 전달하여 예외를 던지는 기본 행위를 변경할 수 있습니다. **ERROR**, **RANDOM_KEY**, **STATIC_KEY**와 같이 세개의 가능한 정책을 제공합니다.
+
+* ERROR: 기본값이며, 사용 가능한 라우팅 키가 없는 경우 예외를 발생 시킵니다.
+* RANDOM_KEY: 명령 메세지에서 라우팅 키를 찾지 못한 경우, 무작위로 생성된 값을 사용합니다. 따라서 해당 명령들은 무작위로 커맨드 버시의 세그먼트로 분배 됩니다.
+* STATIC_KEY: "unresolved"의 값을 가지는 정적 키를 사용하게 되며, 세그먼트의 설정이 변경되지 않는 한 동일한 세그먼트로 해당 명령들은 전달됩니다.
+
 ### JGroupsConnector
+// TODO - continue
+
 ### Spring Cloud Connector
 #### Spring Cloud Http Back Up Command Router
 ## Event Publishing & Processing
