@@ -1342,7 +1342,7 @@ Axon Framework은 JSR 303 Bean Validation 기반 검증을 지원합니다. ```@
 
 메세지 처리 인터셉터는 또한 명령 처리를 위한 트랜잭션을 관리하기 위해 사용이 되며, 이를 위해 ```TransactionManagingInterceptor```를 등록해야 합니다. ```TransactionManagingInterceptor```는 ```TransactionManager```와 함께 구성이 되어 실제 트랜잭션을 시작하고 커밋(혹은 롤백)을 처리하게 됩니다.
 
-## Distributing the Command Bus
+## 분산 커맨드 버스, Distributing the Command Bus
 이전에 설명한 ```CommandBus``` 구현체들은 단일 JVM내에서 명령 메세지를 전달할 수 있는 구현체들입니다. 때때로, 다른 JVM상에서 작동하는 다수의 커맨드 버스들을 하나의 커맨드 버스처럼 작동하도록 해야 할 경우가 있습니다. 한 JVM상의 커맨드 버스로 전달된 명령은 다른 JVM상의 명령 처리자로 전달되어야 하며 결과는 반환되어야 합니다.
 
 위와 같은 경우를 처리하기 위해 ```DistributedCommandBus```를 사용합니다. 다른 ```CommandBus``` 구현체들과는 달리, ```DistributedCommandBus```는 어떤 명령 처리자도 호출하지 않고, 다른 JVM상의 커맨드 버스들을 어려 이어주는(bridge) 역활을 할 뿐입니다. 각각의 JVM상에서 동작하는 ```DistributedCommandBus```의 개별 인스턴스를 "세그먼트(Segment)"라고 합니다.
