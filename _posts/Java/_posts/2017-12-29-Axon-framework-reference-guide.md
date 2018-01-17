@@ -1364,9 +1364,57 @@ Axon Framework은 JSR 303 Bean Validation 기반 검증을 지원합니다. ```@
 * STATIC_KEY: "unresolved"의 값을 가지는 정적 키를 사용하게 되며, 세그먼트의 설정이 변경되지 않는 한 동일한 세그먼트로 해당 명령들은 전달됩니다.
 
 ### JGroupsConnector
-// TODO - continue
+```JGroupsConnector```는 이미 이름에서 알 수 있듯이, 기본 검색 및 전송 메커니즘으로 JGroups를 사용합니다. JGroups의 기능들을 살펴보는 것은 본 참조 문서의 범위를 벗어나기 때문에, 상세 내용을 알고 싶다면 [JGroups User Guide](http://www.jgroups.org/ug.html)를 참조해주세요.
+
+JGroups는 노드(Node)의 검색과 노드간 통신을 다루기 때문에, ```JGroupsConnector```는 ```CommandBusConnector```와 ```CommandRouter```와 같은 역활을 합니다.
+
+> Note
+> ```axon-distributed-commandbus-jgroups``` 모듈에서 ```DistributedCommandBus```를 위한 JGroups 콤포넌트를 찾을 수 있습니다.
+
+```JGroupsConnector```는 아래와 같이 반드시 필요한 네가지의 설정을 필요로 합니다.
+
+* 첫번째는 jChannel이며, jChannel은 JGroups의 프로토콜 스택을 정의합니다. 일반적으로, jChannel은 JGroups의 설정 파일에 대한 참조로 생성됩니다. JGroups는 다수의 기본 설정값들을 제공합니다. 일반적으로 아마존과 같은 클라우드 서비스 상에서 IP Multicast는 작동하지 않습니다. 클라우드 환경에서 TCP Gossip을 사용하는 것이 좋은 시작점이 될 것입니다.
+* 클러스터 이름은 각 세그먼트가 등록해야하는 클러스터의 이름을 정의하며, 동일한 클러스터 이름을 가진 세그먼트는 결국 서로를 감지하고 서로간에 명령을 전달합니다.
+* "로컬 세그먼트"는 로컬 JVM을 대상으로 명령을 전달하는 커맨드 버스의 구현체입니다. 이런 명령들은 다른 JVM의 인스턴스나 로컬 JVM으로부터 전달될 수 있습니다.
+* 마지막으로 명령 메세지가 전송되기 전에 명령 메세지를 직렬화하는 시리얼라이져 입니다.
+
+> Note
+> 캐쉬를 사용할때, 잠재적인 데이터 부패 현상을 피하기 위해 ```ConsistentHash```값이 변경될때 캐쉬를 비우는 것이 좋습니다. (예, 명령이 ```@TargetAggregateVersion```을 가지고 있지 않고,  aggregate가 다른 곳에 캐쉬되어 있는데 수정될때, 새로운 멤버가 JGroups에 빠르게 참여 했다가 떠나는 경우.)
+
+JGroupsConnector는 다른 세그먼트로 메세지를 전달하기 위해 연결되어야 합니다. 이때 ```connect()``` 메서드를 호출하여 연결합니다.
+
+```
+JChannel channel = new JChannel("path/to/channel/config.xml");
+CommandBus localSegment = new SimpleCommandBus();
+Serializer serializer = new XStreamSerializer()p;
+
+JGroupsConnector connector = new JGroupsConnector(
+    channel,
+    "myCommandBus",
+    localSegment,
+    serializer
+);
+DistributedCommandBus commandBus = new DistributedCommandBus(connector, connector);
+
+// on one node;
+commandBus.subscribe(CommandType.class.getName(), handler);
+connector.connect();
+
+//on another node, with more CPU
+commandBus.subscribe(CommandType.class.getName(), handler);
+commandBus.subscribe(AnotherCommandType.class.getName(), handler2);
+commandBus.updateLoadFactor(150); // 기본값: 100
+connector.connect();
+```
+
+> Note
+> 모든 세그먼트가 동일한 타입의 명령들에 대한 명령 처리자를 가지고 있을 필요는 없습니다. 다른 명령 타입에 대해 다른 세그먼트를 함께 사용할 수 있습니다. 분산된 커맨드 버스는 특정 타입의 명령을 처리할 수 있는 세그먼트로 명령을 전달할 수 있는 노드를 항상 선택합니다.
+
+스프링을 사용한다면, ```JGroupsConnectorFactoryBean```을 사용하는 것을 고려해 보세요. ```JGroupsConnectorFactoryBean```은 애플리케이션 컨텍스트가 시작할때 자동으로 커넥터에 연결을 하고, 애플리케이션 컨텍스트가 종료될때 자동으로 연결을 끊습니다. 또한 테스트 환경에 대한 합당한 기본값을 사용하고(운영 환경에 배포가능한 것은 아닙니다.) 구성을 위해 자동 의존성 주입을 합니다.
 
 ### Spring Cloud Connector
+// TODO - continue
+
 #### Spring Cloud Http Back Up Command Router
 ## Event Publishing & Processing
 ### Publishing Events
