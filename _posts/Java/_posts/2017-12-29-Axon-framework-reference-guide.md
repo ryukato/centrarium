@@ -1525,14 +1525,48 @@ public class MyApplicationConfiguration {
 ```
 
 ## Event Publishing & Processing
-// TOD - continue
+애플리케이션에서 발생한 이벤트들은 데이터베이스의 데이터 갱신, 검색 엔진 혹은 이벤트 핸들러들과 같은 이벤트를 필요로 하는 다른 자원들에게 전달되어야 합니다. 이벤트 버스는 이벤트를 필요로 하는 모든 콤포넌트들에게 이벤트를 전달하는 것을 책임집니다. 이벤트를 받는 쪽에선, 이벤트 프로세서들이 적합한 이벤트 처리자를 호출하는 것을 포함한 이벤트를 처리를 담당합니다.
 
 ### Publishing Events
+대다수의 경우, Aggregate들은 이벤트를 적용하면서 이벤트를 발생 시킵니다. 그러나, 이따금, 이벤트 버스로 직접 이벤트(다른 구성 요소 내에서 가능)를 게시할 필요가 있습니다. 이벤트를 게시하기 위해선, 해당 이벤트를 설명하는 페이로드를 ```EventMessage```에 포함시켜야 합니다. ```GenericEventMessage.asEventMessage(Object)``` 메서드를 통해, 페이로드를 ```EventMessage```에 포함시킵니다. ```EventMessage```에 포함시킬 객체가 ```EventMessage``` 타입인 경우, 포함 시킬 객체를 반환합니다.  
+
 ### Event Bus
+```EventBus```는 특정 이벤트를 구독(subscribe - 이벤트 처리를 위해 등록된) 이벤트 처리자에게 이벤트를 전달하기 위한 메커니즘입니다. Axon을 통해 ```SimpleEventBus```와 ```EmbeddedEventStore``` 두개의 이벤트 버스 구현체를 사용할 수 있습니다. 두 구현체 모두 구독(subscribing)과 추적(tracking) 프로세서를 지원합니다 ([EventProcessor](EventProcessor) 참조). 반면, ```EmbeddedEventStore```를 통해 이벤트를 영속화(persist)하고 나중에 이벤트들을 다시 재현할 수 있습니다. ```SimpleEventBus```는 volatile 저장소를 가지고 있고, 특정 콤포넌트로 게시된 이벤트를 더 이상 신경쓰지 않습니다(forget events).
+
+설정 API를 사용한다면, ```SimpleEventBus```가 기본으로 설정됩니다. ```SimpleEventBus``` 대신 ```EmbeddedEventStore```를 설정할 수 있고, 이를 위해 실제 이벤트가 저장될 저장 엔진(Storag)의 구현체를 ```EmbeddedEventStore```에 제공해 주어야 합니다.
+
+```
+Configurer configurer = DefaultConfigurer.defaultConfiguration();
+configurer.configureEmbeddedEventStore(c -> new InMemoryEventStorageEngine());
+```
+
 ### Event Processors
-#### Assigning handlers to processors
+이벤트 처리자를 통해 이벤트를 받았을때 처리할 비지니스 로직을 정의할 수 있습니다. 이벤트 프로세서들은 이벤트 처리를 위한 기술적 부분을 담당하는 콤포넌트입니다. 작업 단위(Unit of Work)과 트랜잭션을 시작하며 이벤트가 처리동안 생성된 모든 메세지에 관련 데이터가 올바르게 첨부 될 수 있도록 합니다.
+
+이벤트 프로세서들은 구독(subscribing)과 추적(tracking)과 같이 두개의 형식으로 표현됩니다. 구독 이벤트 프로세서들은 이벤트가 발생되는 원천에 자신을 등록하고 이벤트 게시 메커니즘에 의해 관리되는 쓰레드로 호출이 됩니다. 반면, 추적 이벤트 프로세서는 자기 자신을 관리하는 쓰레드를 사용하여 이벤트 원천으로부터 이벤트를 가져옵니다.
+
+#### 처리자를 프로세서에 할당하기, Assigning handlers to processors
+모든 프로세서들은 JVM 인스턴스들상에서 프로세서를 식별하기 위한 식별 값을 가집니다. 동일한 이름을 가지는 두개의 프로세서는 동일한 프로세서의 두개의 인스턴스로 취급됩니다.
+
+모든 이벤트 처리자들은 이벤트 처리자 클래스의 패키지 이름을 가지는 프로세서에 포함됩니다. 예를 들면 아래와 같은 클래스들이 해당됩니다.
+
+* ```org.axonframework.example.eventhandling.MyHanaler```
+* ```org.axonframework.example.eventhandling.MyOhterHandler```
+* ```org.axonframework.example.eventhandling.module.MyHandler```
+
+위의 클래스들에 대한 두개의 프로세서들이 생성이 됩니다.
+
+* 두개의 처리자를 포함하는 ```org.axonframework.example.eventhandling```
+* 단일 처리자를 포함하는 ```org.axonframework.example.eventhandling.module```
+
+설정 API를 통해 위와 다른 처리자 클래스를 프로세서에 할당하거나 특정 인스턴스를 특정 프로세서에 할당하는등의 전략을 설정할 수 있습니다.
+
 #### Configuring processors
-##### Event Handlers
+이벤트 프로세서는 개별 이벤트에의해 수행되는 비지니스 로직에 상관없이 이벤트를 처리하기 위한 기술적인 부분만을 담당합니다. 하지만, "일반"(싱글턴, 스테이트리스(stateless)) 이벤트 처리자들의 구성 방식은 Saga들과는 약간 다릅니다. 두 가지 유형의 처리자는 다른 관점으로 처리되기 때문입니다.
+
+##### 이벤트 처리자, Event Handlers
+// TODO - continue
+
 ##### Sagas
 #### Token Store
 #### Parallel Processing
