@@ -1565,10 +1565,54 @@ configurer.configureEmbeddedEventStore(c -> new InMemoryEventStorageEngine());
 이벤트 프로세서는 개별 이벤트에의해 수행되는 비지니스 로직에 상관없이 이벤트를 처리하기 위한 기술적인 부분만을 담당합니다. 하지만, "일반"(싱글턴, 스테이트리스(stateless)) 이벤트 처리자들의 구성 방식은 Saga들과는 약간 다릅니다. 두 가지 유형의 처리자는 다른 관점으로 처리되기 때문입니다.
 
 ##### 이벤트 처리자, Event Handlers
-// TODO - continue
+Axon은 이벤트 구독(subscribing) 프로세서를 기본으로 사용한다. 설정 API의 ```EventHandlingConfiguration```클래스를 통해 처리자를 지정하고 프로세서의 설정 방법을 변경할 수 있다.
+
+```EventHandlingConfiguration``` 클래스에는 다음과 같이 프로세서를 설정하기 위한 메서드를 정의하고 있습니다.
+
+* ```registerEventProcessorFactory``` 메서드를 통해, 명시적인 팩토리 메서드가 없는 경우에 사용되는 이벤트 프로세서를 생성하는 기본 팩토리 메서드를 설정할 수 있습니다.
+* ```registerEventProcessor(String name, EventProcessorBuilder builder)``` 메서드는 주어진 ```name``` 매개변수를 이름으로 가지는 프로세서를 생성하는 팩토리 메서드를 정의합니다. 사용 가능한 이벤트 처리자 빈들에 대한 프로세서명으로 주어진 ```name``` 매개변수명이 채택이 될때만 프로세서는 생성이 됩니다.
+* ```registerTrackingProcessor(String name)``` 메서드는 기본 설정값으로 주어진 이름을 가지는 이벤트 추적 프로세서를 정의합니다. TransactionManager와 TokenStore를 함께 설정하며, 두 객체 기본적으로 주 설정객체를 통해 받아 올 수 있습니다.
+* ```registerTrackingProcessor(String name, Function<Configuration, TrackingEventProcessorConfiguration>  processorConfiguration, Function<Configuration, SequencePolicy<? super EventMessage<?>>> sequencingPolicy)``` 메서드를 통해 주어진 이름을 가지는 이벤트 추적 프로세서를 정의하고, 다중 쓰레드 설정을 알기 위해 주어진 ```TrackingEventProcessorConfiguration``` 객체를 사용합니다. ```SequencePolicy```는 순차적인 이벤트 처리 설정을 정의하기 위해 사용됩니다. 상세 내용은 [Parallel Processing](Parallel Processing)을 참고하세요.
+* ```usingTrackingProcessor()``` 메서드를 통해 이벤트 구독 프로세서 대신 기본으로 추적 이벤트 프로세서를 설정하도록 할 수 있습니다.
 
 ##### Sagas
+```SagaConfiguration``` 클래스를 통해 Saga들을 설정할 수 있습니다. ```SagaConfiguration``` 클래스는 추적 프로세서 혹은 구독 프로세서 둘중 하나의 인스턴스를 초기화하기위한 정적 메세드들을 제공합니다.
+
+구독 모드로 Saga를 운영하기 위해선 아래와 같이 하면 됩니다.
+
+```
+SagaConfiguration<MySaga> sagaConfig = SagaConfiguration.subscribingSagaManager(MySaga.class);
+```
+
+Saga에서 처리될 메세지를 제공하는 기본 이벤트 버스 및 스토어를 사용하지 않을 경우, 다른 메세지 제공 객체를 설정할 수 있습니다.
+
+```
+SagaConfiguration.subscribingSagaManager(MySaga.class, c -> /* 메세지 제공 객체를 설정합니다. */);
+```
+
+```subscribingSagaManager()``` 메서드의 또 다른 형태를 통해, ```EventProcessingStrategy``` 객체를 매개변수로 넘길 수 있습니다. 기본적으로, Saga는 동기적으로 호출되지만 해당 메서드를 통해 비 동기적으로 Saga를 호출할 수 있습니다. 그런데, 추적 프로세서는 비 동기 호출 방식을 사용합니다.
+
+추적 프로세서를 사용하도록 Saga를 설정하기 위해선, 아래와 같이 하면 됩니다.
+
+```
+SagaConfiguration.trackingSagaManager(MySaga.class);
+```
+위와 같이 작성하면, 기본 속성을 사용하게 됩니다. 즉, 단일 쓰레드로 이벤트를 처리하게 됩니다. 이를 변경하려면 아래와 같이 작성합니다.
+
+```
+SagaConfiguration.trackingSagaManager(MySaga.class)
+  // 4개의 쓰레드를 설정합니다.
+  .configureTrackingProcessor(c -> TrackingProcessingConfiguration.forParallelProcessing(4));
+```
+
+```TrackingProcessingConfiguration``` 클래스의 메서드를 통해, 몇개의 세그먼트를 생성할지와 어떤 쓰레드 팩토리(ThreadFactory)를 통해 프로세서 쓰레드를 생성할지를 설정할 수 있습니다. 상세 내용은 [Parallel Processing](Parallel Processing)을 참고하세요.
+
+Saga를 위한 이벤트 처리 방법에 대한 상세 내용은 ```SagaConfiguration```클래스의 API 문서를 확인해 보세요.
+
 #### Token Store
+// TODO - continue
+
+
 #### Parallel Processing
 ##### Multi-node processing
 ### Distributing Events
