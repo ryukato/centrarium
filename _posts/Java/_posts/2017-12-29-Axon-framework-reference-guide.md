@@ -1609,7 +1609,7 @@ SagaConfiguration.trackingSagaManager(MySaga.class)
 
 Saga를 위한 이벤트 처리 방법에 대한 상세 내용은 ```SagaConfiguration```클래스의 API 문서를 확인해 보세요.
 
-#### Token Store
+#### 토큰 스토어, Token Store
 구독 이벤트 프로세서와는 달리, 추적 프로세서는 진행 상태를 저장하기 위한 토큰 저장소(token store)를 필요로 합니다. 추적 프로세서가 이벤트 스트림을 통해 수신하는 각각의 메세지는 토큰을 함께 가지고 있습니다. 이 토큰을 통해, 프로세서는 마지막 이벤트를 수신한 시점이후의 시점에서 스트림을 다시 열수 있습니다. (// TODO - 마지막 문장 재 검토)
 
 설정 API는 전역 설정 인스턴스에서 필요로 하는 대부분의 다른 구성 요소와 함께 토큰 저장소를 설정합니다. 토큰 저장소를 명시적으로 정의하지 않는다면, ```InMemoryTokenStore```를 기본으로 사용합니다. 단, ```InMemoryTokenStore```는 운영 환경에서 사용하기에는 적절하지 않습니다.
@@ -1629,17 +1629,60 @@ Saga 인스턴스는 다중 쓰레드에 의해 절대 호출되지 않습니다
 > Note
 > 구독 프로세서는 자체 쓰레드를 관리하지 않습니다. 즉, 구독 프로세서들은 이벤트 수신 방법을 설정할 수 없습니다. 일반적으로 명령 처리 콤포넌트에서의 동시성 레벨인 aggregate별 순차적 처리에 기반하여 이벤트를 처리합니다.
 
-##### Multi-node processing
+##### 다중 노드를 활용한 처리, Multi-node processing
 추적 프로세서는 동일 노드 혹은 논리적으로 동일한 추적 프로세서를 가지는 다른 노트에서 이벤트 처리 쓰레드들이 모두 실행 중인지에대해 신경 쓰지 않습니다. 동일한 이름을 가지는 두개의 추적 프로세서가 다른 머신(machine)에서 활성화 되어 있을 때, 추적 프로세서들은 논리적으로 동일한 프로세서의 인스턴스로 취급됩니다. 추적 프로세서들은 이벤트 스트림의 세그먼트에 대해 서로 경쟁을 하며, 각각의 인스턴스는 다른 노드에서 처리되는 것을 방지하기 위해 세그먼트를 요청하여 할당 받습니다.
 
 ```TokenStore``` 인스턴스는 JVM의 이름(보통 호스트 이름과 프로세스 ID의 조합입니다.)을 ```nodeId```로 사용합니다. 하지만 다중 노드 처리를 위해 ```TokenStore```를 재정의하여 다른 이름을 사용하도록 할 수 있습니다.
 
-### Distributing Events
-// TODO - continue
+### 이벤트들을 분산하여 처리하기, Distributing Events
+몇몇의 경우엔, 메세지 브로커와 같은 외부 시스템으로 이벤트를 게시할 필요가 있습니다.
 
-#### Spring AMQP
-##### Forwarding events to an AMQP Exchange
-##### Reading Events from an AMQP Queue
+#### 스프링 AMQP, Spring AMQP
+Axon은 Rabbit MQ와 같은 AMQP 메세지 브러커와 이벤트를 주고 받는 기능을 제공합니다.
+
+##### AMQP 익스체인지로 이벤트 전달하기, Forwarding events to an AMQP Exchange
+```SpringAMQPPublisher```는 AMQP 익스체인지로 이벤트를 전달합니다. ```SpringAMQPPublisher```를 초기화 하기 위해선 일반적으로 ```EventBus``` 혹은 ```EventStore```인 ```SubscribableMessageSource```가 필요합니다. 이론적으로, 이벤트 게시자가 구독할 수 있는 모든 이벤트 소스를 설정할 수 있습니다.
+
+```SpringAMQPPublisher```를 설정하기 위해선, Spring의 Bean으로 간단히 등록하면 됩니다. 트랜잭션 지원, 게시자 인지(브로커가 지원하는 경우에 한함) 그리고 익스체인지(exchange) 이름과 같은 것들을 설정할 수 있는 setter 메서드를 제공합니다. 기본 exchange 이름은 "Axon.EventBus"입니다.
+
+> Note
+> 익스체인지(exchange)는 자동으로 생성되지 않습니다. 따라서 사용하려는 큐, 익스체인지 그리고 바인딩들을 반드시 선언해야 합니다. 보다 자세한 내용은 [스프링 문서](https://docs.spring.io/spring-amqp/reference/htmlsingle/)를 참고해 주세요.
+
+##### AMQP 큐로부터 이벤트 읽어 들이기, Reading Events from an AMQP Queue
+스프링의 지원을 받아 AMQP 큐로부터 이벤트 읽어올 수 있습니다. 그런데, AMQP 큐로부터 이벤트 읽어와서 해당 이벤트가 일반적인 이벤트 메세지에 한하여 Axon을 통해 처리하려면, Axon으로 연결을 해줘야 합니다.
+
+```SpringAMQPMessageSource```를 통해 이벤트 스토어 혹은 이벤트 버스 대신, 이벤트 프로세서로 하여금 메세지를 읽어오게 할 수 있습니다. ```SpringAMQPMessageSource```는 스프링 AMQP와 프로세서가 필요로 하는```SubscribableMessageSource```사이의 어댑터 같은 역활을 해줍니다.
+
+```SpringAMQPMessageSource```를 설정하는 가장 쉬운 방법은 ```onMessage```메서드를 재정의 하는 bean 객체를 정의 하고 ```@RabbitListener``` 애노테이션을 붙여 주는 것입니다. 아래의 예제와 같이 말이죠.
+
+```
+@Bean
+public SpringAMQPMesageSource myMessageSource(Serializer serializer) {
+  return new SpringAMQPMessageSource(serializer) {
+      @RabbitListener(queues = "myQueue")
+      @Override
+      public void onMessage(Message message, Channel channel) throws Exception {
+        super.onMessage(message, channel);
+      }
+  };
+}
+```
+스프링의 ```@RabbitListener``` 애노테이션을 사용한 메서드가 주어진 큐(예제에서는 'myQueue')의 각각의 메세지에 대해 호출이 될 수 있도록 해줍니다.
+해당 메서드는 단순히 현재 구독 중인 프로세서들에게 이벤트를 게시하게 해주는 ```super.onMessage()``` 메서드를 호출합니다.
+
+프로세서들을 이 메세지 소스(MessageSource)에 등록하려면, 올바른 ```SpringAMQPMessageSource``` 인스턴스를 구독하려는 프로세서에게 전달해야 합니다.
+
+```
+// @Configuration 파일내에 작성해야 합니다.
+@Autowired
+public void configure(EventHandlingConfiguration ehConfig, SpringAMQPMessageSource myMessageSource) {
+  ehConfig.registerSubscribingEventProcessor("myProcessor", c -> myMessageSource);
+}
+```
+
+추적 프로세서는 ```SpringAMQPMessageSource```와 연동할 수 없으니, 이점에 유의하세요. 
+
+
 ### Asynchronous Event Processing
 
 ## Query Dispatching
