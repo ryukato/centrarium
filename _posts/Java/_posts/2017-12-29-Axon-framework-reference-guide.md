@@ -1680,10 +1680,30 @@ public void configure(EventHandlingConfiguration ehConfig, SpringAMQPMessageSour
 }
 ```
 
-추적 프로세서는 ```SpringAMQPMessageSource```와 연동할 수 없으니, 이점에 유의하세요. 
+추적 프로세서는 ```SpringAMQPMessageSource```와 연동할 수 없으니, 이점에 유의하세요.
 
 
-### Asynchronous Event Processing
+### 비동기적 이벤트 처리, Asynchronous Event Processing
+비동기 방식으로 이벤트를 처리하기 위해서 추적 이벤트 프로세서(Tracking Event Processor)를 사용하는 것을 권장합니다. 추적 이벤트 프로세서를 사용하여 구현하게 되면, 시스템 장애가 발생한 상황(이벤트들이 영속화되어 있다고 가정합니다.)이라도 모든 이벤트의 처리를 모장할 수 있습니다.
+
+그러나, ```SubscribingProcessor```를 사용하여 이벤트를 비동기적으로 처리하는 것도 가능합니다. ```SubscribingProcessor```를 사용하여 이벤트를 비동기적으로 처리하기 위해선, ```SubscribingProcessor```를 반드시 ```EventProcessingStrategy```와 함께 설정해줘야 합니다. ```EventProcessingStrategy```는 괸리 되어야 할 이벤트 리스터들의 호출 방식을 변경하는데 사용이 됩니다.
+
+기본 전략(```DirectEventProocessingStrategy```)은 이벤트를 전달하는 쓰레드 내에서 해당 이벤트 처리자들을 호출하는 것입니다. 이렇게 하면 프로세서가 이미 존재하는 트랜잭션을 사용하도록 할 수 있습니다.
+
+Axon에서 제공하는 다른 전략은 ```AsynchronousEventProcessingStrategy```인데, 이벤트 리스너를 비 동기적으로 호출하기 위해 ```Executor```를 사용합니다.
+
+비록 ```AsynchronousEventProcessingStrategy```가 비동기 방식으로 실행되더라도, 여전히 몇몇의 이벤트들은 확실히 순차적으로 처리되어야 합니다. ```SequencePolicy```를 통해 이벤트들이 순차적으로 실행되어야 하는지, 병렬로 처리되어야 하는지 혹은 두 가지 방법을 결합하여 처리되어야 하는지를 정의합니다. 정책들을 통해 주어진 이벤트의 순번을 받게 됩니다. 만약 정책을 통해 두개의 이벤트에 대해 동일한 순번을 받았다면, 두개의 이벤트는 반드시 순차적으로 처리되어야 하는 것을 말합니다. 순번이 ```null```인 경우, 다른 이벤트와 상관없이 해당 이벤트는 병렬로 처리될 수 있다는 것을 말합니다.
+
+Axon은 다음과 같이 ```FullConcurrencyPolicy```, ```SequentialPolicy``` 그리고 ```SequentialPerAggregatePolicy```들과 같은 공통 정책을 제공합니다.
+
+* ```FullConcurrencyPolicy```는 특정 이벤트 처리자가 모든 이벤트들을 동시에 처리 할 수 있다는 것을 말하며, 이벤트들 간에 특정 순서로 처리되어야 할 필요가 없음을 의미 합니다.
+* ```SequentialPolicy```는 모든 이벤트들이 순차적으로 실행되도록 합니다. 특정 이벤트는 이전 이벤트의 처리가 종료되어야 처리될 수 있습니다.
+*  ```SequentialPerAggregatePolicy```를 통해 동일한 aggregate에서 발생한 도메인 이벤트들을 순차적으로 처리되도록 강제합니다. 그렇지만, 다른 aggregate에서 발생한 이벤트들은 동시에 처리될 수 있습니다. 이런 처리 방식은 데이터베이스 테이블들의 aggregate의 상세를 갱신하는 이벤트 리스너를 사용할 때 적당합니다.
+
+기본적으로 제공되는 정책외에도, 필요에 맞게 새로운 정책을 직접 정의하여 사용할 수 있습니다. 정책을 직접 정의할때는 ```SequencingPolicy``` 인터페이스를 반드시 구현해야 하며, ```SequencingPolicy``` 인터페이스가 포함하고 있는 하나의 메서드 ```getSequenceIdentifierFor``` 메서드를 구현해야 합니다. ```getSequenceIdentifierFor``` 메서드는 주어진 이벤트에 대한 순번을 반환하는 메서드 입니다. 위에서도 말한 것 처럼, 동일한 순번을 가지는 이벤트들을 반드시 순차적으로 처리되어야 하며, 다른 순번을 가지는 이벤트들은 동시에 처리될 수 있습니다. 성능 상의 이유로, 정채 구현 객체는 다른 이벤트에 상관없이 병렬로 처리될 수 있는 이벤트에 대해선 ```null```을 반환해야 합니다. ```null```을 반환하면, Axon 내부적으로 이벤트 처리에 대한 제약 사항들을 확인하지 아도 되므로 빠르게 처리할 수 있습니다.
+
+```AsynchronousEventProcessingStrategy```를 사용할 경우, ```ErrorHandler```를 명시적으로 정의하는 것을 권장합니다. 기본 ```ErrorHandler```는 발생된 예외를 상위로 전달하게 되지만, 비동기 실행환경에선, 예외를 Executor를 제외한 전달할 대상이 없습니다. 이로 인해 이벤트가 처리되지 않는 상황이 발생할 수 있습니다. 대신 에러 사항을 보고한후 이벤트 처리를 계속할 수 있는 ```ErrorHandler```를 사용하는 것을 권장합니다. ```ErrorHandler```를 ```EventProcessingStrategy```를 제공받는  ```SubscribingEventProcessor```의 생성자를 통해 설정합니다.
+
 
 ## Query Dispatching
 ## Query Gateway
