@@ -1705,9 +1705,21 @@ Axon은 다음과 같이 ```FullConcurrencyPolicy```, ```SequentialPolicy``` 그
 ```AsynchronousEventProcessingStrategy```를 사용할 경우, ```ErrorHandler```를 명시적으로 정의하는 것을 권장합니다. 기본 ```ErrorHandler```는 발생된 예외를 상위로 전달하게 되지만, 비동기 실행환경에선, 예외를 Executor를 제외한 전달할 대상이 없습니다. 이로 인해 이벤트가 처리되지 않는 상황이 발생할 수 있습니다. 대신 에러 사항을 보고한후 이벤트 처리를 계속할 수 있는 ```ErrorHandler```를 사용하는 것을 권장합니다. ```ErrorHandler```를 ```EventProcessingStrategy```를 제공받는  ```SubscribingEventProcessor```의 생성자를 통해 설정합니다.
 
 
-## Query Dispatching
-## Query Gateway
-## Query Bus
+## 쿼리요청 전달, Query Dispatching
+Axon Framework 3.1 이후 버전은 쿼리 처리를 위한 콤포넌트를 제공합니다. 쿼리 처리를 위한 레이어는 어렵지 않게 생성할 수 있지만, Axon Framework을 사용하면 인터셉터와 메세지 모니터링과 같은 재 사용 가능한 기능들을 사용할 수 있는 이점이 있습니다.
+
+다음 장에서는, Axon Framework을 사용하여 쿼리요청 처리 구조를 설정하기 위한 작업들을 살펴볼 것 입니다.
+
+## 쿼리 게이트웨이, Query Gateway
+쿼리 게이트웨이는 쿼리요청 전달를 위한 메커니즘을 처리하기 위한 인터페이스입니다. 게이트웨이를 사용하여 쿼리 요청을 전달해야 하는 것은 아니지만, 일반적으로 그렇게 하는 것이 가장 쉬운 방법입니다. Axon Framwork는 ```QueryGateway``` 인터페이스와 ```DefaultQueryGateway``` 구현체를 제공합니다. 쿼리 게이트웨이는 쿼리 요청을 보내고 단일 혹은 다수의 결과를 동기적으로 또는 타임아웃 혹은 비 동기적으로 기다릴 수 있는 메서드들을 제공합니다. 쿼리 버스와 ```QueryDispatchInterceptor```들의 목록(빈 목록 가능)에 접근 가능하도록 쿼리 게이트웨이를 설정해야 합니다.
+
+## 쿼리 버스, Query Bus
+쿼리 버스는 쿼리 처리자에게 쿼리 요청을 전달하기 위한 메커니즘입니다. 쿼리는 쿼리 요청 이름과 쿼리의 응답 타입의 조합을 사용하여 등록합니다. 예를 들어 [scatter-gather 패턴](http://www.enterpriseintegrationpatterns.com/patterns/messaging/BroadcastAggregate.html)을 구현하는데 사용할 수 있는 동일한 요청-응답 조합에 대해 다수의 처리자를 등록할 수 있습니다. 쿼리를 전달할 때, 쿼리 요청을 한 클라이언트는 단일 처리자로부터의 응답 혹은 모든 처리자로부터의 응답 중 어느 것을 원하는지 반드시 지정해야 합니다.
+
+클라이언트가 단일 처리자로부터의 응답을 요청하고 클라이언트가 요청한 쿼리를 처리할 처리자가 없는 경우, ```NoHandlerForQueryException```이 발생하게 됩니다. 다수의 처리자가 등록된 경우, 실제로 호출되는 처리자를 결정하는 것은 쿼리 버스를 어떻게 구현하느냐에 따라 결정됩니다.
+
+만약 클라이언트가 모든 처리자로부터 응답을 원할 경우, 결과의 스트림이 반환됩니다. 해당 스트림은 개별 처리자가 반환한 결과를 포함하고 있습니다. 다만, 정상적으로 쿼리가 처리된 경우의 결과를 포함하며, 특정 순서대로 포함하고 있지 않습니다. 쿼리에 대한 처리자가 없는 경우나 모든 처리자가 예외를 발생 시키는 경우에는 해당 스트림은 비어 있게 됩니다. 
+
 ### Simple Query Bus
 ## Query Interceptors
 ### Dispatch Interceptors
