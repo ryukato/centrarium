@@ -1749,7 +1749,16 @@ Axon Framework은 JSR 303 Bean Validation을 지원하며, 이를 통해 쿼리�
 
 디스팻치 인터셉터와는 달리, 처리자 인터셉터는 쿼리 처리자의 컨택스트 상에서 호출이 됩니다. 이것은 작업단위(Unit of Work)에서 처리할 메세지와 상관관계를 가지는 데이터를 추가할 수 있음을 의미합니다. 이런 상관관계의 데이터는 작업단위의 컨텍스트내에서 생성된 메세지들에 추가될 것입니다.
 
-## Repositories and Event Store
+## 레퍼지토리와 이벤트 저장소, Repositories and Event Store
+레퍼지토리는 aggregate들에 접근할 수 있도록 하는 메커니즘입니다. 레퍼지토리는 데이터를 저장하기 위해 사용되는 실제 저장 메커니즘에 대한 게이트웨이로 작동합니다. CQRS애선, 레퍼지토리들은 고유한 식별자를 통해 aggregate를 찾을 수 있는 기능만 있으면 됩니다. 다른 유형의 쿼리들은 조회를 위한 데이터 베이스상에서 실행이 되어야 합니다.
+
+Axon Framework 상에서, 모든 레퍼지토리들은 반드시 ```Repository``` 인터패이스를 구현해야 합니다. ```Repository``` 인터패이스는 ```load(identifier, version)```, ```load(identifier)``` 그리고 ```newInstance(factoryMethod)``` 메서드들을 규정하고 있습니다. ```load``` 매서드들은 레퍼지토리로부터 aggregate를 받아 오기 위한 메서드이며, 선택적으로 줄 수 있는 매개변수인 ```version```은 동시변경(concurrent modification)을 감지하기 위해 시용됩니다. (참고: [Advanced conflict detection and resolution](Advanced conflict detection and resolution)) ```newInstance``` 매서드는 레퍼지토리에서 새롭게 생성된 aggregate를 등록하기 위해 사용합니다.
+
+기반 영속화 저장소와 감사(auditing)의 필요에 따라, 대부분의 레퍼지토리가 필요로 하는 기본 기능을 제공하는 기본 구현체들은 많이 있습니다. Axon Framework은 aggregate의 현재 상태를 저장하는 레퍼지토리와 (참고 [Standard Repositories](Standard Repositories)) aggregate의 이벤트들을 저장하는 레퍼지토리(참고 [Event Sourcing Repositories](Event Sourcing Repositories))를 구분하여 사용합니다.
+
+```Repository``` 인터페이스는 ```delete(identifier)``` 메서드를 제공히지 않습니다. ```AggregateLifecycle.markDeleted()``` 매서드를 삭제하고자 하는 aggregate내에서 호출하여 해당 aggregate를 삭제 처리 할 수 있습니다. aggregate를 삭제한다는 것은 다른 상태 변화와 마찮가지로 상태의 변경이지만 한 가지 차이점은 많은 경우에 다시 되돌릴 수 없다는 것입니다. aggregate의 상태를 "삭제"로 변경하는 메서드를 구현하여 해당 aggregate의 삭제에따라 발생해야 하는 이밴트를 등록할 수 있습니다.
+
+
 ### Standard repositories
 ## Event Sourcing repositories
 ## Event Store implementations
