@@ -1771,8 +1771,25 @@ Axon은 표준 레퍼지토리 구현체로 ```GenericJpaRepository```를 기본
 
 ```EventSourcingRepository``` 구현체는 Axon Framework 내의 이벤트 소싱 레포지토리가 필요로 하는 기본 기능들을 제공합니다. ```EventStore```(참고:[Implementing your own Event Store](Implementing your own Event Store))에 따라 이벤트를 저장하는 실제 메커니즘은 다를 수 있습니다. 선택적으로, ```EventSourcingRepository```에 Aggregate 팩토리(Factory)를 제공할 수 있습니다. 제공할 ```AggregateFactory```는 aggregate를 생성하는 방법을 명시해야 합니다. aggregate이 생성되면, ```EventSourcingRepository```는 이벤트 스토어로부터 로드된 이벤트들을 사용하여 생성된 aggregate를 초기화 합니다. Axon Framework은 사용할 수 있는 ```AggregateFactory```들을 제공하며 제공된 ```AggregateFactory```가 부족하면 직접 구현하여 사용할 수 있습니다.
 
+### GenericAggregateFactory
+```GenericAggregateFactory```는 이벤트로부터 복원 가능한(event sourced) 모든 타입의 aggregate 루트에 사용할 수 있는 ```AggregateFactory```의 특별한 구현체 입니다. ```GenericAggregateFactory```는 레퍼지토리가 관리하는 aggregate의 인스턴스를 생성합니다. 해당 aggregate 클래스는 추상 클래스일 수 없으며 바디가 비어 있는 기본 생성자를 반드시 선언하고 있어야 합니다.
 
-## Event Store implementations
+GenericAggregateFactory는 aggregate가 비 직렬화 자원의 주입을 필요로 하지 않는 대부분의 경우에 사용할 수 있습니다.
+
+### SpringPrototypeAggregateFactory
+애플리케이션의 아키텍쳐를 고려한 결정에 따라, 스프링을 사용하여 aggregate에 필요한 의존 객체들을 주입할 수 있습니다. 예를 들어, 쿼리 레퍼지토리를 aggregate에 주입하여 특정 값이 존재하는지(혹은 존재하지 않는지)를 확인하도록 할 수 있습니다.
+
+aggregate에 의존 객체를 주입하기위해선, 스프링 컨텍스트에 aggregate 루트 객체의 프로토타입 빈을 설정해야하며 ```SpringPrototypeAggregateFactory``` 또한 스프링 컨텍스트에 설정해줘야 합니다. 생성자를 사용하여 일반적인 인스턴스를 생성하는 것 대신, 스프링 컨텍스트를 사용하여 aggregate들의 인스턴스들을 생성하며, 의존 객체들을 aggregate들에 주입합니다.
+
+### AggregateFactory 직접 구현하기
+몇몇의 경우, ```GenericAggregateFactory```가 원하는 목적에 맞지 않을 수 있습니다. 예를 들어, 다른 여러 시나리오에 대해 다수의 구현체를 가지는 추상 aggregate 타입을 사용해야 하는 경우, (예, ```PublicUserAccount```와 ```BackOfficeAccount``` 모두 ```Account```를 상속하는 경우) 각각의 aggregate들 별로 다른 저장소를 생성하는 대신, 하나의 저장소를 사용하고 AggregateFactory는 각각의 다른 구현체들을 인식하도록 설정할 수 있습니다. Aggregate Factory가 수행하는 작업의 대부분은 초기화되지 않은 Aggregate 인스턴스를 생성하는 것입니다. Aggregate Factory는 주어진 aggregate의 식별자와 이벤트 스트림의 첫번째 이벤트를 사용하여 aggregate 인스턴스를 생성합니다. 보통, 주어진 첫번쩨 이벤트는 aggregate에 대한 생성 이벤트로 생성해야할 aggregate의 타입에 대한 힌트를 포함하고 있습니다. 해당 힌트 정보를 사용하여 구현체를 선택하고 생성자를 호출할 수 있습니다. 해당 aggregate는 반드시 초기화 되지 않은 상태이어야 하므로 생성자에 이벤트를 인자로 줄 수 없음을 명심해야 합니다.
+
+지난 이벤트를 가지고 aggregate를 초기화하는 것은 레퍼지토리에서 직접 aggregate를 로딩하는 것에 비하면 시간 소모적입니다. ```CachingEventSourcingRepository```는 사용 가능하다면, aggregate를 로딩할 수 있는 캐쉬를 제공합니다.
+
+## 이벤트 스토어 구현체들, Event Store implementations
+
+
+
 ### JPA Event Storage Engine
 ### JDBC Event Storage Engine
 ### MongoDB Event Storage Engine
