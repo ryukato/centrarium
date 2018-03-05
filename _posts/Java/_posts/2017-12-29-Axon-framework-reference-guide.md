@@ -1587,7 +1587,7 @@ SagaConfiguration<MySaga> sagaConfig = SagaConfiguration.subscribingSagaManager(
 Saga에서 처리될 메세지를 제공하는 기본 이벤트 버스 및 스토어를 사용하지 않을 경우, 다른 메세지 제공 객체를 설정할 수 있습니다.
 
 ```
-SagaConfiguration.subscribingSagaManager(MySaga.class, c -> /* 메세지 제공 객체를 설정합니다. */);
+SagaConfiguration.subscribingSagaManager(MySaga.class, c -> // 메세지 제공 객체를 설정합니다.);
 ```
 
 ```subscribingSagaManager()``` 메서드의 또 다른 형태를 통해, ```EventProcessingStrategy``` 객체를 매개변수로 넘길 수 있습니다. 기본적으로, Saga는 동기적으로 호출되지만 해당 메서드를 통해 비 동기적으로 Saga를 호출할 수 있습니다. 그런데, 추적 프로세서는 비 동기 호출 방식을 사용합니다.
@@ -1759,8 +1759,19 @@ Axon Framework 상에서, 모든 레퍼지토리들은 반드시 ```Repository``
 ```Repository``` 인터페이스는 ```delete(identifier)``` 메서드를 제공히지 않습니다. ```AggregateLifecycle.markDeleted()``` 매서드를 삭제하고자 하는 aggregate내에서 호출하여 해당 aggregate를 삭제 처리 할 수 있습니다. aggregate를 삭제한다는 것은 다른 상태 변화와 마찮가지로 상태의 변경이지만 한 가지 차이점은 많은 경우에 다시 되돌릴 수 없다는 것입니다. aggregate의 상태를 "삭제"로 변경하는 메서드를 구현하여 해당 aggregate의 삭제에따라 발생해야 하는 이밴트를 등록할 수 있습니다.
 
 
-### Standard repositories
-## Event Sourcing repositories
+### 표준 레퍼지토리, Standard repositories
+표준 레퍼지토리들은 Aggregate의 실제 상태를 저장합니다. 매번 상태가 변경될때마다 새로운 상태값으로 이전 상태값을 덮어씁니다. 이렇게 함으로써, 쿼리 콤포넌트와 명령 콤포넌트들이 동일한 정보를 사용하도록 합니다. 개발하는 에플리케이션의 특성에 따라 다를 수 있으나 이런 형태가 가장 간단한 형태입니다. 이런 형태가 문제가 된다면, Axon이 제공하는 빌딩 블록을 사용하여 레퍼지토리를 직접 구현할 수 있습니다.
+
+Axon은 표준 레퍼지토리 구현체로 ```GenericJpaRepository```를 기본 제공합니다. ```GenericJpaRepository```를 사용하려면, Aggregate는 JPA 엔티티이어야 합니다. ```GenericJpaRepository```는 레퍼지토리에 저장될 Aggregate의 실제 타입을 나타내는 클래스 그라고 ```EntityManagerProvider```와 함깨 설정하며, ```EntityManagerProvider```는 실제 영속화를 관라하는 ```EntityManager```를 제공합니다. 또한 Aggregate이 정적 메서드인  ```AggregateLifeCycle.apply()```를 호출할때 이벤트를 게시하는 ```EventBus```를 ```GenericJpaRepository```로 넘겨줄 수 있습니다.
+
+레퍼지토리를 직접 구현하는 것도 어렵지 않습니다. 추상 레퍼지토리인 ```LockingRepository```를 상속하여 구현하는 것이 가장 빠르게 레퍼지토리를 구현하는 방법입니다. aggregate의 래퍼 타입으로는 ```AnnotatedAggregate```를 사용하는 것을 권장합니다. 상세한 예제는 ```GenericJpaRepository```의 소스 코드를 살펴보세요.
+
+## 이벤트 소싱 레퍼지토리, Event Sourcing repositories
+이벤트들을 기반으로 상태를 재 구성할 수 있는 Aggregate 루트는 이밴트 소싱 레퍼지토리에의해 로딩 되도록 설정할 수 있습니다. 이런 이벤트 소싱 레퍼지토리들은 aggregate 자체를 저장하지 않지만, aggregate에 의해 발생하는 일련의 이벤트들을 저장합니다. 이런 이밴트들을 기반으로, 언제든 aggregate의 상태는 복원될 수 있습니다.
+
+```EventSourcingRepository``` 구현체는 Axon Framework 내의 이벤트 소싱 레포지토리가 필요로 하는 기본 기능들을 제공합니다. ```EventStore```(참고:[Implementing your own Event Store](Implementing your own Event Store))에 따라 이벤트를 저장하는 실제 메커니즘은 다를 수 있습니다. 선택적으로, ```EventSourcingRepository```에 Aggregate 팩토리(Factory)를 제공할 수 있습니다. 제공할 ```AggregateFactory```는 aggregate를 생성하는 방법을 명시해야 합니다. aggregate이 생성되면, ```EventSourcingRepository```는 이벤트 스토어로부터 로드된 이벤트들을 사용하여 생성된 aggregate를 초기화 합니다. Axon Framework은 사용할 수 있는 ```AggregateFactory```들을 제공하며 제공된 ```AggregateFactory```가 부족하면 직접 구현하여 사용할 수 있습니다.
+
+
 ## Event Store implementations
 ### JPA Event Storage Engine
 ### JDBC Event Storage Engine
