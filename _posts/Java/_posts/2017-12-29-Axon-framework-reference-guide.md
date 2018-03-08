@@ -1857,8 +1857,20 @@ public class MyEntityManagerProvider implements EntityManagerProvider {
 >
 > 이 문제를 우회적으로 해결하기 위해선, 비 엔티티(non-entity)객체에 대한 쿼리만을 반드시 사용해야 합니다. JPA의 "SELECT new SomeClass(parameters) FROM ..."과 같은 유형의 쿼리를 사용하여 문제를 해결할 수 있습니다. 다른 방법으로는, 일괄적으로 이밴트들을 가져온 후에, ```EntityManager.flush()```와 ```EntityManager.clear()``` 메서드를 호출하세요. 그렇게 하지 않으면 상당한 양의 이벤트 스트림을 로딩할 경우, ```OutOfMemoryException```가 발생할 수 있습니다.
 
-### JDBC Event Storage Engine
-### MongoDB Event Storage Engine
+### JDBC기반의 이벤트 저장 엔진, JDBC Event Storage Engine
+JDBC기반의 이벤트 저장 엔진은 JDBC Connection을 사용하여 JDBC를 사용해 연결한 데이터 저장소에 이벤트들을 저장합니다. 일반적으로, 데이터 저장소는 관계정 데이터베이스(RDMBS)입니다. 이론적으로, JDBC 드라이버를 제공하는 모든 데이터베이스는 JDBC기반의 이벤트 저장 엔진과 사용할 수 있습니다.
+
+JPA와 비슷하게, JDBC 기반의 이밴트 저장 엔진은 엔트리들로 이벤트를 저장합니다. 기본적으로 각 이벤트는 테이블의 하나의 열에 해당하는 단일 엔트리로 저장됩니다. 하나의 테이블은 이벤트들을 저장하기 위해 사용되고 다른 테이블은 스냅샵을 저장하기 위해 사용됩니다.
+
+```JdbcEventStorageEngine```은 ```ConnectionProvider```를 사용하여 데이터베이스 커넥션을 받아 옵니다. 일반적으로, 이런 커넥션들은 데이터 소스(DataSource)로 부터 직접 받아 올 수 있습니다. 그렇지만, Axon은 이런 커넥션들은 작업 단위(Unit of Work)와 묶어서 사용합니다. 그래서 하나의 작업 단위는 하나의 커넥션을 사용합니다. 이것은 단일 트랜젝션을 사용하여 모든 이벤트들을 저장할 수 있도록 보장하며, 심지어 다수의 작업 단위들이 동일한 스레드내에서 중첩될 수 있게 해줍니다.
+
+> 참고
+>
+> 스프링을 사용한다면, ```DataSource```의 커넥션을 이미 존재하는 트랜젝션에 연결하기 위해   ```SpringDataSourceConnectionProvider```를 사용하는 것을 권장합니다.
+
+### 몽고디비 기반의 이벤트 저장 엔진, MongoDB Event Storage Engine
+
+
 ## Event Store Utilities
 ### Combining multiple Event Stores into one
 ### Filtering Stored Events
