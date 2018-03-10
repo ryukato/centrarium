@@ -1880,10 +1880,17 @@ JPA와 비슷하게, JDBC 기반의 이밴트 저장 엔진은 엔트리들로 �
 몽고DB는 많은 설정을 필요로 하지 않습니다. 이벤트를 저장하는 컬렉션의 참조만 있으면 됩니다. 운영 환경에선, 컬렉션에 설정된 인덱스들을 재확인해야 할 수 있습니다.
 
 ## 이벤트 저장 유틸리티, Event Store Utilities
+Axon을 통해 특정 환경에서 유용하게 사용할 수 있는 이벤트 저장 엔진들을 사용할 수 있습니다.
 
-### Combining multiple Event Stores into one
-### Filtering Stored Events
-### In-Memory Event Store
+### 다수의 이벤트 저장소를 하나로 묶어 사용, Combining multiple Event Stores into one
+```SequenceEventStorageEngine```은 두개의 이벤트 저장 엔진을 묶어서 사용할 수 있게 해주는 래퍼입니다. 이벤트를 읽어 올때, ```SequenceEventStorageEngine```은 두개의 이벤트 저장 엔진들에서 이벤트들을 반환 합니다. 추가된 이벤트들은 두번째 이벤트 저장소에만 추가됩니다. ```SequenceEventStorageEngine```은 예를 들어, 성능상의 이유로 두개의 이벤트 저장 구현체들을 사용하는 경우에 유용하게 사용할 수 있습니다. 두번째 구현체는 빠른 읽기와 쓰기를 지원하지만, 첫번쩨 구현체는 큰 용량을 지원하지만 느린 이벤트 저장소인 경우에 ```SequenceEventStorageEngine```를 사용할 수 있습니다.
+
+### 필터링 이벤트 저장 엔진, Filtering Stored Events
+```FilteringEVentStorageEngine```은 predicate을 사용하여 이벤트들을 걸러낼(필터링) 수 있습니다. 따라서 predicate에 일치하는 이벤트들만을 저장할 수 있습니다. 이벤트 저장소를 이벤트의 원천(source)으로 사용하는 이벤트 처리자들은 predicate에 일치하지 않는 이벤트들이 저장되지 않기 때문에, 해당 이벤트들을 받지 못할 수 있습니다.
+
+### 메모리 기반 이벤트 저장 엔진, In-Memory Event Store
+```InMemoryEventStorageEngine```은 메모리에 이벤트들을 저장하는 ```EventStorageEngine```의 구현체입니다. 다른 이벤트 저장 엔진에 비해 뛰어난 성능을 제공할 수 있지만, 오랜 기간 이벤트를 저장하는 용도로는 적합하지 않습니다. 그러나 이벤트를 필요로 하는 짧은 시간동안 사용되는 도구 혹은 테스트 사용 시에 유용하게 사용할 수 있습니다.
+
 
 ## Influencing the serialization process
 ### Serializing Events vs 'the rest'
