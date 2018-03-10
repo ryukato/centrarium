@@ -1892,8 +1892,30 @@ Axon을 통해 특정 환경에서 유용하게 사용할 수 있는 이벤트 �
 ```InMemoryEventStorageEngine```은 메모리에 이벤트들을 저장하는 ```EventStorageEngine```의 구현체입니다. 다른 이벤트 저장 엔진에 비해 뛰어난 성능을 제공할 수 있지만, 오랜 기간 이벤트를 저장하는 용도로는 적합하지 않습니다. 그러나 이벤트를 필요로 하는 짧은 시간동안 사용되는 도구 혹은 테스트 사용 시에 유용하게 사용할 수 있습니다.
 
 
-## Influencing the serialization process
-### Serializing Events vs 'the rest'
+## 직렬화 프로세싱, Influencing the serialization process
+이벤트 저장소들은 이벤트들을 저장을 위한 준비를 하기 위해 이벤트를 직력화하는 방법이 필요 합니다. 기본적으로, Axon은 ```XStreamSerializer```를 사용하며, ```XStreamSerializer```은 [XStream](http://x-stream.github.io)을 사용하여 이벤트를 XML로 직력화합니다. XStream은 Java 직력화보다 충분히 빠르며 보다 유연합니다. 게다가, XStream 직력화의 결과물은 사람이 읽을 수 있습니다. 로깅과 디버깅용으로 상당히 유용합니다.
+
+```XStreamSerializer```을 설장하여, 특정 패키지, 클래스 또는 필드에 사용해야하는 별칭을 정의 할 수 있습니다. 잠재적으로 긴 이름을 줄이는 좋은 방법 일뿐만 아니라, 이벤트의 클래스 정의가 변경 될 때 별칭을 사용할 수도 있습니다. 별칭에 대한 자세한 내용은 XStream 웹 사이트를 방문하십시오.
+
+다른 방법으로는, Axon은 이벤트를 JSON으로 직렬화하는 [Jackson](https://github.com/FasterXML/jackson)을 사용하는 ```JacksonSerializer```를 제공합니다. ```JacksonSerializer```은 보다 간결한 직렬화 형태를 생성하는 반면, 클래스는 Jackson이 요구하는(또는 설정)을 지켜야 합니다.
+
+```Serializer```를 구현하는 클래스를 생성하여, 직접 시리얼라이져를 구현하여 사용할 수 있습니다. 그리고 이벤트 저장소의 기본 객체 대신 구현체를 사용하는 이벤트 저장소를 설정해야 합니다.
+
+
+### 이벤트 직렬화 대 다른 객체 직렬화, Serializing Events vs 'the rest'
+Axon 3.1 이후,Axon이 직렬화 해야 하는 다른 모든 객체들(커맨드들, 스냅샵, 사가(Saga) 등등)보다는 이벤트의 저장을 위해 다른 직렬화 객체를 사용할 수 있습니다. ```XStreamSerializer```은 모든 객체를 직렬화하여 매우 적절한 기본값으로 만들지만, 항상 다른 애플리케이션과 공유하기 좋은 형태의 결과를 만드는 것은 아닙니다. ```JacksonSerializer```은 훨씬 좋은 결과물을 만들지만 직렬화를 위한 특정 형태를 가지는 객체들을 필요로 합니다. 이 구조는 일반적으로 이벤트에 나타나며, 이벤트 직렬화에 매우 적합합니다.
+
+설정 API를 사용하여, 다음과 같이 간단하게 이벤트 직렬화 객체를 등록 할 수 있습니다.
+
+```
+Configurer configurer = ... // 초기화
+configurer.configureEventSerializer(
+  conf -> // 직렬화 객체(시리얼라이져)를 생성합니다.
+);
+```
+
+명시적으로 ```eventSerializer```를 설정하지 않으면, 이미 구성되어 있는 메인 시리얼라이져를 사용하여 이벤트들을 직렬화합니다 (기본적으로 XStream 직렬화기를 기본값으로 사용합니다.). 
+
 
 ## Event Upcasting
 ### Provided abstract upcaster implementations
