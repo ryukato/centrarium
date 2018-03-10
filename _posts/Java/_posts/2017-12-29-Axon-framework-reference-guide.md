@@ -1868,10 +1868,19 @@ JPA와 비슷하게, JDBC 기반의 이밴트 저장 엔진은 엔트리들로 �
 >
 > 스프링을 사용한다면, ```DataSource```의 커넥션을 이미 존재하는 트랜젝션에 연결하기 위해   ```SpringDataSourceConnectionProvider```를 사용하는 것을 권장합니다.
 
-### 몽고디비 기반의 이벤트 저장 엔진, MongoDB Event Storage Engine
+### 몽고DB 기반의 이벤트 저장 엔진, MongoDB Event Storage Engine
+몽고DB는 도큐먼트 기반의 NoSQL 저장소 입니다. 몽고DB의 규모 가변성 특징들은 이벤트 저장소로 사용하는데 적합합니다. Axon은 ```MongoDBEventStorageEngine```을 제공하며, ```MongoDBEventStorageEngine```은 몽고DB를 기반 데이터베이스로 사용합니다. ```MongoDBEventStorageEngine``` 은 Axon 몽고 모듈에 포함되어 있으며, 메이븐 artifactId는 ```axon-mongo``` 입니다.
 
+이벤트들은 두개의 분리된 컬렉션에 저장이 됩니다. 하나는 실제 이벤트 스트림들을 저장하고, 다른 하나는 스냅샵들을 저장합니다.
 
-## Event Store Utilities
+기본적으로, ```MongoDBEventStorageEngine```은 각각의 이벤트 유형을 독립된 도큐먼트에 저장합니다. 그렇지만 이벤트를 저장하는 방법에 대한 ```StorageStrategy```를 변경할 수 있습니다. Axon에서 제공하는 다른 대안은 ```DocumentPerCommitStorageStrategy```이며, ```DocumentPerCommitStorageStrategy```은 하나의 도큐먼트를 생성하여 단일 커밋내에 포함된 모든 이벤트를 생성한 도큐먼트에 저장합니다. (예, 동일  ```DomainEventStream```내의 이벤트들)
+
+전체 커밋을 하나의 도큐먼트에 저장하는 것은 커밋을 자동으로 저장하게 되는 장점이 있습니다. 게다가, 모든 이벤트들에 대해 단일 왕복(데이터베이스로 데이터를 요청하고 응답을 받는 과정)으로 가져올 수 있습니다. 단점으로는, 데이터베이스로 이벤트를 조회하기 위한 쿼리를 직접 실행하는 것이 힘들어 집니다. 예를 들어, 이벤트들이 하나의 커밋 문서에 포함되어 있다면, aggregate에서 다른 aggregate로 이벤트들을 옮기는 것이 어려울 수 있습니다.
+
+몽고DB는 많은 설정을 필요로 하지 않습니다. 이벤트를 저장하는 컬렉션의 참조만 있으면 됩니다. 운영 환경에선, 컬렉션에 설정된 인덱스들을 재확인해야 할 수 있습니다.
+
+## 이벤트 저장 유틸리티, Event Store Utilities
+
 ### Combining multiple Event Stores into one
 ### Filtering Stored Events
 ### In-Memory Event Store
@@ -1959,3 +1968,8 @@ ACID는 Atomicity, Consistency, Isolation, Durability의 첫글짜를 딴 줄임
 
 ### backing scheduling
 // TODO - search
+
+### [Round Trips](http://database-programmer.blogspot.kr/2008/06/database-performance-web-layer.html)
+데이터 검색의 기본 비용은 "Round Trip"입니다. 데이터베이스 프로그래머는 서버에 요청을 보내고 몇 가지 결과를 검색 할 때마다 발생하는 "Round Trip"을 말합니다. 서버가 요청을 시작하고 끝낼 때 자원을 할당하고 해제하기위한 기본 작업을 수행해야하기 때문에 서버에 대한 각 왕복 여행에는 약간의 오버 헤드가 있습니다. 이 오버 헤드는 데이터를 찾아서 검색하기 위해 실제로 디스크에 나가기 위해 서버가 지불해야하는 기본 비용에 추가됩니다.
+
+응용 프로그램이 필요한 것보다 많은 왕복을하면 프로그램이 느려질 수 있습니다.
