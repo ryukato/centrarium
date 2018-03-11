@@ -1936,12 +1936,103 @@ configurer.configureEventSerializer(
 
 Axon의 업 캐스터들은 ```EventMessage```에 직접 사용할 수 없지만, ```IntermediateEventRepresentation```과 함께 사용할 수 있습니다. ```IntermediateEventRepresentation```는 실제 업 캐스트(upcast) 기능들과 함께 ```EventMessage```를 생성하기 위한 모든 필요한 항목들을 추출할 수 있는 기능을 제공합니다. (따라서 ```EventMessage```또한 가능 합니다.) 업 캐스트 기능들은 기본적으로 이벤트의 페이로드, 페이로드 타입에 대한 조정과 이벤트의 메타 데이터의 추가만을 허용 합니다. 업 캐스트 기능에서의 이벤트의 실제 표현은 사용된 직렬화 객체 혹은 원하는 연동 형식에 따라 달라 질 수 있으므로, ```IntermediateEventRepresentation```의 업 캐스트 기능을 통해 예상되는 표현 유형을 선택 할 수 있습니다. 메세지, aggregate 식별자, aggregate 유형 그리고 타임 스탬프 등과 같은 항목들은 ```IntermediateEventRepresentation```에 의해 변경할 수 없습니다. 이런 항목들을 변경하는 것은 업 캐스터의 목적과 맞지 않기 때문에, ```IntermediateEventRepresentation``` 구현체를 통해 그런 항목들을 변경할 수 없습니다.
 
-Axon Framework에서의 기본 ```Upcaster``` 인터페이스는 ```IntermediateEventRepresentation```의 ```Stream```을 가지고 작동하며 ```IntermediateEventRepresentation```의 ```Stream```을 반환합니다. 따라서 업 캐스팅 프로세스는 업 캐스팅 기능의 최종 결과를 직접 반환하지는 않지만, ```IntermediateEventRepresentation```를 스태킹(stacking)하여 하나의 수정 버전에서 다른 수정 버전까지 모든 업 캐스팅 기능을 체인으로 연결합니다. 이런 프로세스 과정을 거치고 최종 결과를 끌어 내면,  실제 업 캐스팅 기능이 직렬화된 이벤트를 대상으로 수행된 것입니다. 
+Axon Framework에서의 기본 ```Upcaster``` 인터페이스는 ```IntermediateEventRepresentation```의 ```Stream```을 가지고 작동하며 ```IntermediateEventRepresentation```의 ```Stream```을 반환합니다. 따라서 업 캐스팅 프로세스는 업 캐스팅 기능의 최종 결과를 직접 반환하지는 않지만, ```IntermediateEventRepresentation```를 스태킹(stacking)하여 하나의 수정 버전에서 다른 수정 버전까지 모든 업 캐스팅 기능을 체인으로 연결합니다. 이런 프로세스 과정을 거치고 최종 결과를 끌어 내면,  실제 업 캐스팅 기능이 직렬화된 이벤트를 대상으로 수행된 것입니다.
+
+### 추상 업 캐스터 구현체, Provided abstract upcaster implementations
+이미 설명한 것 처럼, ```Upcaster``` 인터페이스는 하나의 이벤트를 업 캐스트하지 않습니다. ```Upcaster```는 하나의 ```Stream<IntermediateEventRepresentation>```를 필요로 하며 ```Stream<IntermediateEventRepresentation>```를 반환합니다. 하지만 업 캐스터는 보통 해당 스트림에서 단일 이벤트를 조정하기 위해 작성됩니다. 더 정교한 업 캐스팅 설정도 할 수 있습니다. 예를 들어, 하나의 이벤트에서 다수의 이벤트로 혹은 이전 이벤트에서 상태를 뽑아내어 이후에 발생한 이벤트에 밀어 넣을 수 있는 업 캐스터가 있을 수 있습니다. 이번 장은 원하는 추가 기능을 포함하는 업 캐스터를 구현하는데 사용할 수 있는 Axon에서 제공하는 이벤트 업 캐스터의 추상 구현체에 대해 설명합니다.
+
+* ```SingleEventUpcaster``` - 이 업 캐스터는 이벤트 업 캐스터의 구현체 중 하나로, 추상 클래스 형태로 제공되므로 이 클래스를 상속 받아 ```canUpcast```와 ```doUpcast``` 메서드를 구현해야 합니다. ```canUpcast``` 메서드는 주어진 이벤트를 업 캐스트 할 수 있는지를 판단하는 메서드이고 ```doUpcast``` 메서드는 업 캐스트할 방법을 정의 하는 메서드 입니다. 대부분의 이벤트 조정은 이벤트 자체에 포함된 데이터를 기반으로 일대일로 이루어지기 때문에, ```SingleEventUpcaster```를 상속하여 업 캐스터를 구현하는 것이 가장 적합한 방법입니다.
+
+* ```EventMultiUpcaster``` - 이 업 캐스터는 일대다를 위한 업 캐스터의 구현체로, ```SingleEventUpcaster```와는 달리 ```doUpcast``` 메서드는 단일 ```IntermediateEventRepresentation```` 대신 ```Stream```을 반환합니다. ```EventMultiUpcaster```를 통해, 단일 이벤트를 여러개의 이벤트로 변환할 수 있습니다. 예를 들어, 복합적인 의미를 담고 있는 이벤트(fat event)를 여러 이벤트로 좀 더 세분하길 원할때 유용하게 사용할 수 있습니다.
+
+* ```ContextAwareSingleEventUpcaster``` - 일대일 변환을 위한 업 캐스터로, 변환 프로세스 동안 이벤트의 컨텍스트를 저장할 수 있습니다. ```canUpcast```와 ```doUpcast```외에, ```ContextAwareSingleEventUpcaster```는 ```buildContext``` 메서드를 추가로 구현해야 합니다. ```buildContext``` 메서드는 컨텍스트를 생성하는 메서드로, 해당 컨텍스트는 업 캐스트를 거쳐 가는 이벤트들 간에 전달될 수 있습니다. ```canUpcast```와 ```doUpcast``` 기능들은 ```IntermediateEventRepresentation``` 매개변수 다음으로 해당 컨텍스트를 두 번쩨 매개 변수로 받습니다. 컨텍스트는 이전 이벤트들에서 항목들을 뽑아내고 다음 이벤트를 채우기 위해 업 캐스팅 프로세스내에서 사용 될 수 있습니다. 즉, 컨텍스트를 통해, 하나의 이벤트내의 항목을 완전히 다른 이벤트로 전달할 수 있습니다.
+
+* ```ContextAwareEventMultiUpcaster``` - 일대다를 위한 업 캐스터 구현체이며, 변환 프로세스 동안 이벤트의 컨텍스트를 저장할 수 있습니다. 이 구현체는 ```EventMultiUpcaster```와 ```ContextAwareSingleEventUpcaster```의 조합으로 만들어졌으며, ```IntermediateEventRepresentations```의 컨텍스트를 유지할 수 있게 해주고 하나의 ```IntermediateEventRepresentation```을 여러개로 업 캐스팅 할 수 있게 해줍니다. 단순히 하나의 이벤트내의 항목을 다른 이벤트로 복사하는 것이 아닌, 새로운 여러 이벤트들을 생성해야 하는 경우에 사용할 수 있습니다.
+
+### 업 캐스터 작성, Writing an upcaster
+다음의 Java 코드들은 일대일 업 캐스터(```SingleEventUpcaster```)의 기본 예제 입니다.
+
+이전 버전의 이벤트
+```
+@Revision("1.0")
+public class ComplaintEvent {
+  private String id;
+  private String companyName;
+
+  // 생성자 및 게터/세터
+}
+```
+
+새로운 버전의 이벤트
+
+```
+@Revision("2.0")
+public class ComplaintEvent {
+  private String id;
+  private String companyName;
+  private String description; // 새로운 항목
+
+  // 생성자 및 게터/세터
+}
+```
+
+업 캐스터
+
+```
+// 1.0 버전의 이벤트를 2.0 버전의 이벤트로 업 캐스팅
+public class ComplaintEventUpcaster extends SingleEventUpcaster {
+  private static SimpleSerializedType targetType = ne SimpleSerializedType(ComplaintEvent.class.getTypeName(), "1.0");
+
+  @Override
+  protected boolean canUpcast(IntermediateEventRepresentation intermediateEventRepresentation) {
+    return intermediateRepresentation.getType().equals(targetType);
+  }
+
+  @Override
+  protected IntermediateEventRepresentation doUpcast(IntermediateEventRepresentation intermediateEventRepresentation) {
+    return intermediateRepresentation.upcastPayload(
+        new SimpleSerializedType(targetType.getName(), "2.0"),
+        org.dom4j.Document.class,
+        document -> {
+          document.getRootElement().addElement("description").setText("no complaint description"); // 기본값으로 설정
+          return document;
+        }
+      );
+  }
+}
+```
+
+스프링 부트 설정
+
+```
+@Configuration
+public class AxonConfiguration {
+
+  @Bean
+  public SingleEventUpcaster myUpcaster() {
+    return new ComplaintEventUpcaster();
+  }
+
+  @Bean
+  public JpaEventStorageEngine eventStorageEngine(
+    Serializer serializer,
+    DataSource dataSource,
+    SingleEventUpcaster myUpcaster,
+    EntityManagerProvider entityManagerProvider,
+    TransactionManager transactionManager
+  ) throws Exception {
+    return new JpaEventStorageEngine(
+      serializer,
+      myUpcaster::upcast,
+      dataSource,
+      entityManagerProvider,
+      transactionManager
+    );
+  }
+}
+```
 
 
-
-### Provided abstract upcaster implementations
-### Writing an upcaster
 ### Content type conversion
 
 ## Snapshotting
