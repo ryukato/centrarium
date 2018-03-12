@@ -2085,8 +2085,39 @@ Axon은 ```AggregateSnapshotter```를 제공하며, ```AggregateSnapshotter```�
 
 스프링을 사용하는 경우, ```SpringAggregateSnapshotter```를 사용할 수 있습니다. ```SpringAggregateSnapshotter```는 스냅샷을 생성할 필요가 있을 때, 애플리케이션 컨텍스트에서 스스로 필요한 ```AggregateFactory```를 찾아 냅니다.
 
-### Storing Snapshot Events
+### 스냅샷 이벤트 저장, Storing Snapshot Events
+스냅샷이 이벤트 저장소에 저장되면, 자동으로 해당 스냅샷을 사용하여 이전의 모든 이벤트를 요약하고 원래의 위치로 되돌립니다. 모든 이벤트 저장소 구현체들은 동시에 스냅샷들을 생성할 수 있게 합니다. 즉, 다른 프로세스가 동일한 aggregate에 이벤트를 추가하는 동안, 스냅샷을 저장할 수 있습니다. 다시 말해, 스냅샷을 저장하는 프로세스는 별도의 프로세스로 다른 프로세스와 함께 실행됩니다.
+
+> 참고
+>  
+> 보통, 스냅샷 이벤트의 일부분인 경우, 모든 이벤트들을 저장할 수 있습니다. 이벤트 저장소는 일반적으로 이벤트를 다시 읽어 들이는 것 처럼 저장된 이벤트들을 다시 읽을 수 는 없습니다. 하지만, 스냅샷이 생성되기 이전의 aggregate의 상태로 복구하려면, 항상 최신의 이벤트를 유지해야 합니다.
+
+Axon은 ```AggregateSnapshot```이라는 특별한 형태의 스냅샷 이벤트를 제공합니다. ```AggregateSnapshot```은 전체 aggregate를 하나의 스냅샷으로 저장합니다. 이렇게 하는 이유는 간단한데, 정의한 aggregate는 사업적인 결정을 내리는데 필요한 상태만을 가져야 하기 때문입니다. 이것이 바로 스냅샷으로 캡쳐하여 저장해야할 정보입니다. Axon에서 제공하는 모든 이벤트 소싱 레퍼지토리들은 ```AggregateSnapshot```을 인식할 수 있으며, aggregate를 추출할 수 있습니다.  이 스냅샷 이벤트를 사용하려면, 이벤트 직렬화 메커니즘을 통해 aggregate를 직렬화 할 수 있어야 한다는 점에 유의하세요.
+
 ### Initializing an Aggregate based on a Snapshot Event
+스냅샷 이벤트는 다른 이벤트들과 비슷합니다. 즉, 스냅샷 이벤트 또한 다른 도메인 이벤트들과 비슷한 방식으로 처리할 수 있습니다. 각 이벤트를 처리할 수 있는 처리자(handler)를 분명히 나누기 위해 에노테이션(```@EventHandler```)을 사용할때, 스냅샷 이벤트를 가지고 전체 aggregate의 상태를 초기화 할 수 있는 메서드에 에노테이션을 추가할 수 있습니다. 아래의 예제 코드를 통해 다른 도메인 이벤트를 다루는 것과 같이 스냅샷 이벤트를 다루는 방법을 살펴 볼 수 있습니다.
+
+```
+public class MyAggregate extends AbstractAnnotatedAggregateRoot {
+	// ... 간략한 코드를 위해 생략된 부분입니다.
+	
+	@EventHandler
+	protected void handleSomeStateChangeEvent(MyDomainEvent event) {
+		//...
+	}
+	
+	@EventHandler
+	protected void applySnapshot(MySnapshotEvent event) {
+		// the snapshot event should contain all relevant state
+		this.someState = event.someState;
+		this.otherState = event.otherState;
+	}
+}
+
+```
+```AggregateSnapshot```타입의 이벤트들은 다른 이벤트들과는 다르게 처리해야 합니다. 해당 유형의 스냅샷 이벤트는 실제 aggregate을 포함하고 있습니다. aggregate 팩토리는 ```AggregateSnapshot``` 타입의 이벤트를 인식하고 해당 스냅샷으로부터 aggregate를 뽑아 낼 수 있습니다. 그런 다음 다른 모든 이벤트가 추출 된 스냅 샷에 다시 적용됩니다. 즉, aggregate들은 ```AggregateSnapshot``` 인스턴스들을 직접 다룰 필요가 없습니다.
+
+
 
 ## Advanced conflict detection and resolution
 
