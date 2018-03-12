@@ -2032,11 +2032,59 @@ public class AxonConfiguration {
 }
 ```
 
+### 컨텐트 타입 변환, Content type conversion
+업 캐스터는 주어진 타입(예, dom4j Document)에 대해 작동하게 됩니다. 업 캐스터간 추가적인 유연성을 증가 시키기 위해서, 서로 엮어있는(체인닝) 업 캐스터들간의 컨텐트 타입들이 변할 수 있습니다. Axon은 ```ContentTypeConverter```들을 사용하여 자동으로 컨텐트 타입간의 변환을 합니다. Axon은 ```x```타입을 ```y```타입으로 변경하기 위한 가장 짧은 경로를 찾아, 변환을 수행하고 변경된 값을 요청된 업 캐스터로 전달합니다. 성능상의 이유로, 변환된 타입을 받을 업 캐스터의 ```canUpcast```메서드가 참을 반환하는 경우에만 변환이 이루어 집니다.
 
-### Content type conversion
+```ContentTypeConverter```들은 사용되는 직렬화 객체의 타입에 의존적 일 수 있습니다. ```byte[]```를 dom4j의 ```Document```로 변환을 시도하는 것은 사용된 ```Serializer```가 이벤트를 XML로 쓰는 경우에만 수행될 수 있습니다. ```UpcasterChain```이 직렬화 객체에 명시된 ```ContentTypeConverter```들에 접근 권한을 가지게 하려면, ```UpcasterChain```의 생성자에 직렬화 객체의 참조를 넘겨 주어야 합니다.
 
-## Snapshotting
-### Creating a snapshot
+> 팁
+>
+> 최고의 성능을 내기 위해선, 특정 업 캐스터의 결과가 다른 업 캐스터의 입력이 되는 같은 체인내의 모든 업 캐스터들이 동일한 컨텐트 타입에 대해 동작하도록 해야 합니다.
+
+특정 컨텐트 타입을 Axon이 제공하는 ```ContentTypeConverter```로 수행 할 수 없는 경우, 다른 경우와 마찮가지로 ```ContentTypeConverter``` 인터페이스를 직접 구현하여 사용할 수 있습니다.
+
+```XStreamSerializer```는 Dom4j 뿐만 아니라 XOM을 XML 문서로 표현하는 것을 지원합니다. ```JacksonSerializer```는 Jackson의 ```JsonNode```를 지원합니다.
+
+## 스냅샷 지정, Snapshotting
+Aggregate들이 오랫동안 살아 있으면서 상태가 계속 변경할때, 해당 aggregate들은 많은 양의 이벤트 들을 만들어 냅니다. Aggregate의 상태를 재 구성하기 위해 이 모든 이벤트들을 로딩해야 한다면, 성능상의 큰 문제를 일으 킬 수 있습니다.  스냅샷 이벤트는 특정 목적을 가진 도메인 이벤트이며, 임의의 다수 이벤트들을 요약하여 하나의 이벤트로 만들어 냅니다. 스냅샷 이벤트를 정기적으로 생성하고 저장하여, 이벤트 저장소로 하여금 많은 양의 이벤트들을 반환하지 않도록 합니다. 마지막 스냅 샷 이벤트들과 스냅샷이 만들어진 후의 이벤트들만을 반환하면 됩니다.
+
+예를 들어, 재고로 쌓여 있는 상품량은 자주 변경이 됩니다. 상품이 판매 될때마다, 상품 판매 이벤트는 재고량을 하나씩 줄여 갑니다. 새로운 상품들에 대한 적재가 이루어질 때 마다, 재고량은 적재량 만큼 증가하게 됩니다. 만약 하루에 100개의 상품을 판다고 하면, 매일 적어도 100개의 이벤트가 만들어 지게 됩니다. 몇일이 지나면, 시스템은 단지 "ItemOutOfStockEvent"를 발생 시키기위해 모든 이벤트들을 읽어야 하고, 이로 인해 많은 시간이 소비 됩니다. 하지만 하나의 스냅샷 이벤트가 이 많은 이벤트들을 대체하게 되면, 단지 재고 상의 현재 상품 수만을 저장하면 됩니다.
+
+### 스냅샷 생성, Creating a snapshot
+스냅샷을 생성하는 것은 몇가지 요소들을 통해 자동으로 이루어 질 수 있습니다. 예를 들어, 마지막 스냅샷 이후 생성된 이벤트의 개수, 특정 기준점을 지난 aggregate을 초기화한 시간, 시간을 기반으로 한 방법 등이 있을 수 있습니다. 현재로는, Axon은 발생한 이벤트 개수를 기준으로 스냅샷을 생성할 수 있는 메커니즘을 제공합니다.
+
+언제 스냅샷이 만들어져야 하는지에 대한 정의는 ```SnapshotTriggerDefinition``` 인터페이스를 통해 생성할 수 있습니다.
+
+```EventCountSnapshotTriggerDefinition```은 이름처럼 aggregate를 로딩하기 위해 필요한 이벤트의 개수가 특정 기준값을 초과할때 스냅샷을 생성할 수 있는 메커니즘을 제공합니다. 만약 aggregate를 로딩하기 위해 필요한 이벤트의 개수가 설정한 기준값을 초가하였다면, 트리거는 ```Snapshotter```에게 해당 aggregate에 대한 스냅샷을 만들라고 말해 줍니다.
+
+스냅샷 트리거는 이벤트를 저장하고 제공하는 레퍼지토리에 설정할 수 있고 ```Snapshotter```와 ```Trigger```와 같은 트리거링을 변경할 수 있도록 하는 속성들을 가지고 있습니다.
+
+* ```Snapshotter```는 실제 스냅샷을 생성하는 snapshotter 인스턴스를 설정하며, 실제 스냅샷 이벤트를 생성하고 저장하는 책임을 가지고 있습니다.
+*  ```Trigger```는 스냅샷 생성을 일으킬 기준값을 설정 합니다.
+
+Snapshotter는 실제 스냅샷을 생성하는 책임을 지고 있습니다. 일반적으로, 스냅샷을 생성하는 것은 최대한 운영 프로세스를 방해하지 말아야 하는 프로세스 입니다. 따라서, 별도의 스레드에서 스냅샷을 생성하는 것을 권장합니다. ```Snapshotter``` 인터페이스는 단 하나의 메서드 ```scheduleSnapshot()```를 선언하고 있으며, ```scheduleSnapshot()```는 aggregate의 타입과 식별자를 매개변수로 받습니다.
+
+Axon은 ```AggregateSnapshotter```를 제공하며, ```AggregateSnapshotter```는 ```AggregateSnapshot``` 인스턴스를 생성하고 저장합니다. ```AggregateSnapshot```는 자신 내부에 실제 aggregate 인스턴스를 가지고 있는 특별한 형태의 스냅샷입니다. Axon이 제공하는 레퍼지토리들은 이와 같은 타입의 스냅샷을 인식하며, 새로운 aggregate 인스턴스를 만들지 않고 해당 스냅샷에서 aggregate를 추출할 수 있습니다. 스냅샷 이벤트 이후에 발생한 이벤트들은 로딩되어 추출된 aggregate 인스턴스로 스트리밍됩니다.
+
+> 참고
+>
+> 사용하고 있는 ```Serializer``` 인스턴스(기본값은 ```XStreamSerializer```)가 정의한 aggregate를 직렬화할 수 있는지를 분명히 파악해야 합니다. ```XStreamSerializer```를 사용한다면, Hotspot JVM을 사용하거나 혹은 정의한 aggregate이 접근 가능한 기본 생성자를 가지거나 ```Serializable``` 인터페이스를 구현해야 합니다.
+
+```AbstractSnapshotter```는 스냅샷을 생성하는 방법을 변경(개조)할 수 있는 속성들, 예를 들어 ```EventStore```와 ```Executor```들과 같은 속성들을 제공합니다.
+
+* ```EventStore```를 통해, 지난 이벤트들을 가져오고 스냅샷을 저장하는데 사용되는 이벤트 저장소를 설정 할 수 있습니다. 이벤트 저장소는 반드시 ```SnapshotEventStore``` 인터페이스를 구현해야 합니다.
+* ```Executor```는 ```ThreadPoolExecutor```와 같은 Executor를 설정하며, 설정한 Executor를 통해 스냅샷 설정 프로세스를 실행할 스레드를 제공할 수 있습니다. 기본적으로, 스냅샷은 ```scheduleSnapshot()```메서드를 호출하는 스레드내에서 생성됩니다. 이 방법은 운영 환경에서 사용하지 않는 것이 좋습니다.
+
+```AggregateSnapshotter```는 ```AggregateFactories```라는 추가적인 속성 하나를 더 제공합니다.  
+
+* ```AggregateFactories``` 속성을 통해, aggregate 인스턴스를 생성할 수 있는 팩토리들을 설정할 수 있습니다. 다수의 aggregate 팩토리들을 설정 한후, 하나의 스냅샷 생성 객체를 사용하여 다양한 형태의 aggregate들에 대한 스냅샷을 생성 할 수 있습니다. ```EventSourcingRepository``` 구현체들은 자신들이 사용하는 ```AggregateFactory```에 접근 할 수 있도록 허용해주기 때문에, 레퍼지토리에서 사용하는 aggregate 팩토리 객체들을 snapshotter에서도 사용할 수 있도록 설정 할 수 있습니다.
+
+> 참고
+>
+> 다른 스레드에서 스냅샷을 생성하기 위해 executor를 사용할때, 필요한 경우에 기반이 되는 이벤트 저장소를 위한 정확한 트랜잭션 매니지먼트를 설정해야 합니다.
+
+스프링을 사용하는 경우, ```SpringAggregateSnapshotter```를 사용할 수 있습니다. ```SpringAggregateSnapshotter```는 스냅샷을 생성할 필요가 있을 때, 애플리케이션 컨텍스트에서 스스로 필요한 ```AggregateFactory```를 찾아 냅니다.
+
 ### Storing Snapshot Events
 ### Initializing an Aggregate based on a Snapshot Event
 
