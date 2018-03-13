@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Money in the XRP Ledger
+title: XRP Ledger Integration
 date: 2018-02-22 09:36:55
 tags: [ripple, 리플, 번역]
 categories: [Ripple, 번역]
