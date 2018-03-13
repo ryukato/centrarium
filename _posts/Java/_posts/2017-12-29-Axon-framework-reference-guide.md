@@ -2094,7 +2094,7 @@ Axon은 ```AggregateSnapshotter```를 제공하며, ```AggregateSnapshotter```�
 
 Axon은 ```AggregateSnapshot```이라는 특별한 형태의 스냅샷 이벤트를 제공합니다. ```AggregateSnapshot```은 전체 aggregate를 하나의 스냅샷으로 저장합니다. 이렇게 하는 이유는 간단한데, 정의한 aggregate는 사업적인 결정을 내리는데 필요한 상태만을 가져야 하기 때문입니다. 이것이 바로 스냅샷으로 캡쳐하여 저장해야할 정보입니다. Axon에서 제공하는 모든 이벤트 소싱 레퍼지토리들은 ```AggregateSnapshot```을 인식할 수 있으며, aggregate를 추출할 수 있습니다.  이 스냅샷 이벤트를 사용하려면, 이벤트 직렬화 메커니즘을 통해 aggregate를 직렬화 할 수 있어야 한다는 점에 유의하세요.
 
-### Initializing an Aggregate based on a Snapshot Event
+### 스냅샷으로 aggregate 초기화, Initializing an Aggregate based on a Snapshot Event
 스냅샷 이벤트는 다른 이벤트들과 비슷합니다. 즉, 스냅샷 이벤트 또한 다른 도메인 이벤트들과 비슷한 방식으로 처리할 수 있습니다. 각 이벤트를 처리할 수 있는 처리자(handler)를 분명히 나누기 위해 에노테이션(```@EventHandler```)을 사용할때, 스냅샷 이벤트를 가지고 전체 aggregate의 상태를 초기화 할 수 있는 메서드에 에노테이션을 추가할 수 있습니다. 아래의 예제 코드를 통해 다른 도메인 이벤트를 다루는 것과 같이 스냅샷 이벤트를 다루는 방법을 살펴 볼 수 있습니다.
 
 ```
