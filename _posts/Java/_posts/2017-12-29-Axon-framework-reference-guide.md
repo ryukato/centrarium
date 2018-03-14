@@ -2100,12 +2100,12 @@ Axon은 ```AggregateSnapshot```이라는 특별한 형태의 스냅샷 이벤트
 ```
 public class MyAggregate extends AbstractAnnotatedAggregateRoot {
 	// ... 간략한 코드를 위해 생략된 부분입니다.
-	
+
 	@EventHandler
 	protected void handleSomeStateChangeEvent(MyDomainEvent event) {
 		//...
 	}
-	
+
 	@EventHandler
 	protected void applySnapshot(MySnapshotEvent event) {
 		// the snapshot event should contain all relevant state
@@ -2117,14 +2117,41 @@ public class MyAggregate extends AbstractAnnotatedAggregateRoot {
 ```
 ```AggregateSnapshot```타입의 이벤트들은 다른 이벤트들과는 다르게 처리해야 합니다. 해당 유형의 스냅샷 이벤트는 실제 aggregate을 포함하고 있습니다. aggregate 팩토리는 ```AggregateSnapshot``` 타입의 이벤트를 인식하고 해당 스냅샷으로부터 aggregate를 뽑아 낼 수 있습니다. 그런 다음 다른 모든 이벤트가 추출 된 스냅 샷에 다시 적용됩니다. 즉, aggregate들은 ```AggregateSnapshot``` 인스턴스들을 직접 다룰 필요가 없습니다.
 
-
-
 ## Advanced conflict detection and resolution
+변경의 의미에 대해 명시적으로 표현하는 것의 주요 이점 중 하나는 충돌을 일으키는 변경 사항을 보다 정확하게 발견할 수 있다는 점입니다. 읿반적으로, 이런 충돌이 나는 변경 사항들은 두 사용자들이 동일한 데이터에 (거의)동시에 어떤 작업을 할때 발생합니다. 두 사용자 모두 특정 버전의 데이터를 본다고 생각해보세요. 그리고 두 사용자 모두 해당 데이터를 바꿀려고 합니다. 그들 모두 데이터를 변경하기 위해 "버전 X에 해당하는 aggregate의 상태를 바꿔"와 같은 명령을 보낼 것입니다. 이때 X는 aggregate의 특정 버전을 말합니다. 그들 중 한명은 원하는대로 해당 버전에 적용된 변경 사항을 가질 것이고, 다른 한명은 그렇지 못할 것입니다.
 
-## Spring Boot AutoConfiguration
+다른 프로세스에 의해 이미 aggregate가 변경이 된 경우, 모든 들어오는 명령들을 거부하는 대신, 사용자들의 의도와 보이지 않는 변경 사항들이 충돌하는 지를 확인할 수 있습니다.
+
+충돌 사항을 발견하기 위해선, 정의한 aggregate내에 ```@CommandHandler``` 에노테이션이 사용된 메서드로 ```ConflictResolver```를 매개 변수로 전달해야 합니다. ```ConflictResolver```인터페이스는 ```detectConflicts``` 메서드를 선언하고 있으며, 해당 메서드를 통해 특정 타입의 명령을 수행할때 충돌을 일으키는 이벤트들을 정의 할 수 있습니다.
+
+> 참고
+>
+> 특정 기대 버전의 Aggregate가 로딩 되었을 때, 잠재적으로 충돌을 일으키는 이벤트들만이 ```ConflictResolver```에 포함됩니다. 특정 기대 버전의 Aggregate를 지정하기 위해서 ```@TargetAggregateVersion``` 에노테이션을 명령 객체의 특정 항목에 사용해야 합니다.
+
+predicate를 통해 발견된 이벤트가 있다면, 예외가 발생됩니다. 발생 시킬 예외를 명시하려면, ```detectConflicts``` 메서드에 선택적으로 줄 수 있는 두번째 매개 변수에 발생 시키고자 하는 예외를 정의 하면 됩니다. 아무런 이벤트도 발견되지 않는다면, 프로세는 보통때와 같이 진행됩니다.
+
+```detectConflicts``` 메서드 호출이 이루어지지 않지만 잠재적인 충돌 이벤트들이 있다면, ```@CommandHandler```는 실패하게 됩니다. 이런 경우는 기대 버전의 Aggregate가 제공되었지만, 사용가능한 ```ConflictResolver```가 ```@CommandHandler```메서드의 매개변수에 없는 경우 일 수 있습니다.
+
+## 스프링 부트 자동 설정, Spring Boot AutoConfiguration
+Axon은 스프링 부트의 자동 설정을 지원하며, 이를 통해 Axon의 인프라-스트럭쳐 콤포넌트들을 아주 쉽게 설정할 수 있습니다. ```axon-spring-boot-starter```를 의존성 항목에 추가하면, Axon은 커맨드 버스, 이벤트 버스와 같은 기본 인프라-스트럭쳐 콤포넌트들을 자동으로 설정할 뿐만 아니라, Aggregate와 Saga들을 실행하고 저장하는데 사용되는 콤포넌트들 또한 자동으로 설정합니다.
+
+스프링 애플리케이션 컨텍스트내에 존재하는 다른 콤포넌트에 따라, 스프링 애플리케이션 컨텍스트내에 명시적으로 존재 하지 않는 콤포넌트들을 Axon은 정의 하게 됩니다. 즉, 기본으로 설정되는 콤포넌트와는 다른 콤포넌트를 사용하길 원하는 경우에 해당 콤포넌트만 설정하면 됩니다.
+
 ### Event Bus and Event Store Configuration
+JPA가 사용 가능한 경우, JPA 기반의 이벤트 저장 엔진을 사용하는 이벤트 저장소가 기본으로 사용됩니다. 이를 통해 명시적인 설정 없이도 이벤트 소싱을 사용하는 Aggregate의 저장을 할 수 있습니다.
+
+JPA가 사용 가능하지 않다면, Axon은 ```SimpleEventBus```를 기본으로 사용합니다. 다시 말해서 개별 Aggregate에 대한 이벤트 소싱 레퍼지토리가 없는 것은 명시하거나 스프링 설정에 ```EventStorageEngine```을 설정해야 합니다.
+
+JPA가 클래스패스에 존재하지만 다른 이벤트 저장 엔진을 설정하려면, 이벤트 소싱을 하기 위해 ```EventStorageEngine``` 타입의 빈(bean)을 정의 하거나 이벤트 소싱이 필요 없다면 ```EventBus```를 정의 하면 됩니다.
+
 ### Command Bus Configuration
+애플리케이션 컨텍스트에 명시적으로 정의된 ```CommandBus```의 구현체가 없다면, ```SimpleCommandBus```가 기본으로 사용됩니다. ```PlatformTransactionManager```가 애플리케이션 컨텍스트에 설정되어 사용 가능하다면, ```CommandBus```는 설정된 ```PlatformTransactionManager```를 사용합니다.
+
+```CommandBus```로 정의된 빈(bean)이 ```DistributedCommandBus```만 있는 경우라도, Axon은 분산 커맨드 버스에 대한 로컬 세그먼트로 커맨드 버스 구현체를 사용하도록 설정합니다. 설정된 커맨드 버스 구현체 빈은 "localSegment" 한정자(Qualifier)로 지정됩니다. ```DistributedCommandBus```를 ```@Primary``` 에노테이션을 사용하여 정의하여 의존성 주입에 대한 높은 우선 순위를 부여 하는 것을 권장합니다.
+
 ### Query Bus Configuration
+애플리케이션 컨텍스트에 명시적으로 정의된 ```QueryBus``` 구현체가 없는 경우, ```SimpleQueryBus```가 기본으로 사용됩니다. ```QueryBus```는 트랜잭션들을 관리하는 ```TransactionManager```를 사용합니다.
+
 ### Transaction Manager Configuration
 ### Serializer Configuration
 ### Aggregate Configuration
