@@ -2153,8 +2153,53 @@ JPA가 클래스패스에 존재하지만 다른 이벤트 저장 엔진을 설�
 애플리케이션 컨텍스트에 명시적으로 정의된 ```QueryBus``` 구현체가 없는 경우, ```SimpleQueryBus```가 기본으로 사용됩니다. ```QueryBus```는 트랜잭션들을 관리하는 ```TransactionManager```를 사용합니다.
 
 ### Transaction Manager Configuration
-### Serializer Configuration
-### Aggregate Configuration
+애플리케이션 컨텍스트에 명시적으로 정의된 ```TransactionManager```의 구현체가 없는 경우, Axon은 스프링 ```PlatformTransactionManager``` 빈을 찾아서 ```TransactionManager```로 포함시켜 ```PlatformTransactionManager```를 통해 실제 트랜잭션을 관리하도록 합니다. 스프링 빈을 사용할 수 없는 경우에는 ```NoOpTransactionManager```가 사용됩니다.
+
+### 직렬화 객체 설정, Serializer Configuration
+기본적으로, Axon은 객체들을 직렬화하기 위해 XStream 기반의 직렬화 객체를 사용합니다. 그렇지만 ```Serializer``` 타입의 빈을 애플리케이션 컨텍스트에 정의하여 기본으로 사용되는 직렬화 객체를 바꿀 수 있습니다.
+
+기본 직렬화 객체는 거의 틀림없이 보기 어려운 xml 기반 형식을 제공하는 하지만, 사실상 모든 항목을 직렬화 및 역 직렬화할 수 있으므로 기본 설정으로 사용하기에는 매우 좋습니다. 하지만 오랜 시간 동안 저장할 필요가 있고 애플리케이션의 경계를 넘어 공유될 수도 있는 이벤트들에 대해서, 형식을 재정의 할 필요가 있습니다.
+
+```eventSerializer``` 한정자(qualifier)를 해당 객체에 사용하여, 이벤트를 직렬화하는데 사용되는 별도의 직렬화 객체를 정의 할 수 있습니다. Axon은 ```eventSerializer``` 한정자가 사용된 빈 객체를 이벤트 직렬화 객체로 간주하게 됩니다. 만약 정의된 빈 객체가 없다면, 기본 직렬화 객체가 다른 모든 객체들을 직렬환 하는데 사용이 될 것입니다.
+
+예제 코드는 ```eventSerializer``` 한정자를 사용하여 직렬화 객체를 정의하는 코드입니다.
+
+```
+@Qualifier("eventSerializer")
+@Bean
+public Serializer eventSerializer() {
+  return new JacksonSerializer();
+}
+
+```
+
+기본 직렬화 객체를 재정의하는 것과 이벤트 직렬화 객체를 정의 하는 것 모두 사용하는 경우, 스프링에게 기본 직렬화 객체가 어떤 것인지 알려 주어야 합니다. 아래의 코드를 통해 그 방법을 알 수 있습니다.
+
+```
+@Primary // 우선 순위가 높은 빈으로 설정하여, 특정 한정자가 요청되지 않으면 기본으로사용되도록 합니다.
+@Bean
+public Serializer serializer() {
+  return new MyCustomSerializer();
+}
+
+
+@Qualifier("eventSerializer")
+@Bean
+public Serializer eventSerializer() {
+  return new JacksonSerializer();
+}
+
+```
+
+### Aggregate 설정, Aggregate Configuration
+```org.axonframework.spring.stereotype``` 패키지에 포함된 ```@Aggregate``` 에노테이션을 통해 이 에노테이션이 사용된 타입을 Aggregate로 만드는데 필요한 콤포넌트들을 자동으로 설정할 수 있습니다. Aggregate루트 객체에만 ```@Aggregate``` 에노테이션을 사용해야 하는 것에 유의 하세요.
+
+Axon은 자동으로 ```@CommandHandler``` 에노테이션이 사용된 모든 메서드들을 커맨드 버스에 등록할 것이고 레퍼지토리가 없다면 레퍼지토리도 설정 할 것입니다.
+
+기본 레퍼지토리 대신 다른 레퍼지토리를 사용하려면, 애플리케이션 컨텍스트에 다른 레퍼지토리를 정의해야 합니다. ```@Aggregate``` 에노테이션의 ```repository```속성에 사용하자고 하는 레퍼지토리의 이름을 정의 할 수 도 있습니다. 단 필수 사항은 아닙니다. ```repository``` 속성을 정의 하지 않으면, Axon은 aggregate의 이름에 ```Repository```라는 접미사를 사용하여 레퍼지토리 이름으로 사용할 것입니다.(단 첫글자는 소문자로 시작합니다.) ```MyAggregate```라는 타입의 클래스의 경우, 기본 레퍼지토리 이름은 ```myAggregateRepository```가 됩니다.  만약 해당 이름을 가지는 빈을 찾지 못하면, Axon은 ```EventSourcingRepository```를 정의 할 것입니다. (단 사용 가능한 ```EventStore```가 없는 경우, 실패하게 됩니다. )
+
+
+
 ### Saga Configuration
 ### Event Handling Configuration
 ### Query Handling Configuration
