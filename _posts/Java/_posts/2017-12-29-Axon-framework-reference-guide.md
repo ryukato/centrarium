@@ -2341,12 +2341,56 @@ axon.distributed.load-factor=100
 
 ```CommandRouter```와 ```CommandBusConnector```들이 애플리케이션 컨텍스트에 존재하면, Axon은 자동으로 분산 커맨드 버스를 설정하게 됩니다. 이 경우, ```axon.distributed.enabled``` 속성은 명시하지 않아도 되며, 라우터와 커넥터들의 자동 설정이 활성화 됩니다.
 
-#### Using JGroups
+#### JGroup 사용하기, Using JGroups
+분산 커맨드 버스 모듈은 다른 노드들을 발견하고 서로 통신하기 위해 JGroup들을 사용합니다. 자동 설정(AutoConfiguration)은 ```JGroupsConnector```를 기본 설정 값들로 설정합니다. 해당 기본 설정 값들은 각각의 환경에 맞게 조정해야 할 수 도 있습니다.
 
+기본으로, JGroupConnector는 GossipRouter를 로컬 호스트의 포트 12001번을 사용하도록 위치 시킵니다.  
 
-#### Using Spring Cloud
+JGroupConnector에 대한 설정값들은 모두 ```axon.distributed.jgroups```라는 접두사를 사용합니다.
 
-## Advanced Customizations
+```
+# JGroupConnector 인스턴스에 바인드 되는 주소, 기본적으로 글로벌 IP 주소를 찾습니다.
+axon.distributed.jgroups.bind-addr=GLOBAL
+# 로컬 인스턴스에 바인드할 포트 번호
+axon.distributed.jgroups.bind-port=7800
+
+# 개별 노드들이 연결할 JGroups Cluster의 이름
+aoxn.distributed.jgroups.cluster-name=Axon
+
+# JGroups 설정 내용을 담고 있는 JGroups 설정 파일
+axon.distributed.jgroups.configuration-file=default_tcp_gossip.xmlnx
+
+# Gossip 서버들의 IP 주소와 포트 번호 (콤마(,)로 구분하여 명시합니다.)
+axon.distributed.jgroups.gossip.hosts=localhost[12001]
+
+# true값으로 설정할 경우, Gossip Server를 gossip hosts에 명시된 주소들 중 첫번째 주소를 사용하여 내장된 Gossip Server를 시작합니다.
+axon.distributed.jgroups.gossip.auto-start=false
+
+```
+
+JGroups 설정 파일은 커넥터의 기능들을 좀 더 세세하게 제어하기 위해 사용합니다. 더 많은 정보를 보려면, [JGroups의 참조 문서](http://www.jgroups.org/manual4/index.html)를 살펴보세요.
+
+#### 스프링 클라우드 사용하기, Using Spring Cloud
+스프링 클라우드는 디스커버리(그룹 혹은 클러스터내의 특정 노드를 찾는 것)에 대한 훌륭한 추상화를 제공합니다. Axon은 스프링 클라우드의 사용성을 보고하고 다른 커멘트 버스 노드들을 찾기 위해 이런 추상화들을 사용할 수 있습니다. 커멘트 버스 노드들과의 통신을 위해, Axon은 기본으로 스프링 HTTP를 사용합니다.
+
+스프링 클라우드를 사용하기 위해 설정해야 할 내용은 많지 않습니다. 스프링 클라우드 자동 설정은 이미 존재하는 스프링 클라우드 디스커버리(Discovery) 클라이언트를 사용합니다. (단, 반드시 ```@EnableDiscoveryClient```가 사용이 되었는지와 필요한 클라이언트가 클래스패스에 추가되어 있어야 합니다.)
+
+그렇지만, 일부 디스커버리 클라이언트들은 인스턴스 메터데이터를 동적으로 갱신할 수 없는데, Axon은 이를 감지하면 HTTP를 사용해서 해당 노드를 쿼리합니다. 이는 보통 30초 간격으로 이루어 지는 각각의 디스커버리 허트비트(heartbeat)마다 이루어 집니다.
+
+이런 기능은 ```application.properties```에 선언할 수 있는 다음의 설정을 통해 활성/비활성화 할 수 있습니다.
+
+```
+# 사용 가능한 메터 데이터가 없는 경우, http를 사용할 것인지를 설정
+axon.distributed.spring-cloud.fallback-to-http-get=true
+
+# 로컬 데이터를 게시하고 다른 노드들의 데이터를 수신할 주소를 설정
+axon.distributed.spring-cloud.fallback-url=/message-routing-information
+
+```
+
+보다 세세한 제어를 위해선, ```SpringCloudHttpBackupCommandRouter``` 혹은 ```SpringCloudCommandRouter```를 애플리케이션 컨텍스트에 등록해야 합니다.
+
+## 고급 사용자 정의, Advanced Customizations
 ### Parameter Resolvers
 ### Meta Annotations
 ### Customizing Message Handler behavior
@@ -2403,3 +2447,6 @@ ACID는 Atomicity, Consistency, Isolation, Durability의 첫글짜를 딴 줄임
 데이터 검색의 기본 비용은 "Round Trip"입니다. 데이터베이스 프로그래머는 서버에 요청을 보내고 몇 가지 결과를 검색 할 때마다 발생하는 "Round Trip"을 말합니다. 서버가 요청을 시작하고 끝낼 때 자원을 할당하고 해제하기위한 기본 작업을 수행해야하기 때문에 서버에 대한 각 왕복 여행에는 약간의 오버 헤드가 있습니다. 이 오버 헤드는 데이터를 찾아서 검색하기 위해 실제로 디스크에 나가기 위해 서버가 지불해야하는 기본 비용에 추가됩니다.
 
 응용 프로그램이 필요한 것보다 많은 왕복을하면 프로그램이 느려질 수 있습니다.
+
+### GossipRouter
+TCP 기반 그룹 통신을위한 라우터 (UDP 대신 레이어 TCP 사용). 패킷을 다른 구성원에게 지점 간 패킷을 보내는 TCP 계층 대신 패킷을 라우터로 보내고 대상 주소에 따라 멀티 캐스트 또는 유니 캐스트를 그룹 / 단일 구성원에게 보냅니다.
