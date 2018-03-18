@@ -2224,11 +2224,126 @@ public SagaConfiguration<MySaga> mySagaConfigBean() {
 ```
 
 ### Event Handling Configuration
+기본적으로, ```@EventHandler``` 에노테이션이 사용된 메서드를 포함하는 모든 싱글톤 스코프로 등록된 스프링 빈 콤포넌트들은 이벤트 버스로 게시된 이벤트 메세지들을 수신하는 이벤트 프로세서에 구독 등록을 하게 됩니다.
+
+애플리케이션 컨텍스트에 등록되어 사용 가능한 ```EventHandlingConfiguration``` 빈은 이벤트 처리자들에 대한 설정을 조정할 수 있는 메서드들을 가지고 있습니다. 이벤트 처리자와 이벤트 프로세서들에 대한 상세 설정 내용은 [Configuration API](https://github.com/AxonFramework/ReferenceGuide/blob/3.1/part1/configuration-api.md)를 참고하시면 됩니다.
+
+이벤트 처리 설정을 수정하려면, 변경하고자 하는 설정 내용을 포함하는 메서드를 정의하고 ```@Autowired``` 에노테이션을 해당 메서드에 설정하면 됩니다.
+
+```
+@Autowired
+public void configure(EventHandlingConfiguration config) {
+  config.usingTrackingProcessor(); // 모든 프로세서들은 tracking mode를 기본으로 사용합니다.
+}
+
+```
+
+```application.properties```를 통해서도 이벤트 처리자의 특정 설정을 변경하여 사용할 수 있습니다.
+
+```
+axon.eventhandling.processors.name.mode=tracking
+axon.eventhandling.processors.name.source=eventBus
+
+```
+
+프로세서 이름에 마침표(```.```)들이 들어가 있다면, 맵 표기법을 사용하세요.
+
+```
+axon.eventhandling.processors["name"].mode=tracking
+axon.eventhandling.processors["name"].source=eventBus
+
+```
+
+혹은 application.yml 파일을 사용할 수 있습니다.
+
+```
+axon:
+  eventhandling:
+    processors:
+      name:
+        mode: trakcing
+        source: eventBus
+
+```
+
+위의 예제 코들들에서 ```name```하위의 ```source``` 속성은 명시된 이벤트 프로세서의 이벤트 소스로 사용되는 ```SubscribableMessageSource``` 혹은 ```StreamableMessageSource``` 의 구현체 빈의 이름에 대한 참조입니다. 애플리케이션 컨텍스트에 정의된 이벤트 버스 혹은 이벤트 저장소를 기본 이벤트 소스로 사용합니다.
+
 ### Query Handling Configuration
+모든 싱글톤 스프링 빈들을 스캔하여 ```@QueryHandler``` 에노테이션이 사용된 메서드들을 찾아 냅니다. 발견된 ```@QueryHandler``` 에노테이션이 사용된 메서드들은 각각 쿼리 버스에 쿼리 처리자로 등록됩니다.
+
 #### Parallel processing
-### Enabling AMQP
-### Distributing commands
+Tracking 프로세서들은 다수의 스레드를 사용하여 이벤트를 병렬로 처리할 수 있습니다. 모든 스레드들이 동일한 모드로 실행될 필요는 없습니다.
+
+Tracking 프로세서는 해당 인스턴스에서 사용할 스레드의 개수와 프로세서가 정의해야하는 세그먼트의 초기 개수를 설정할 수 있습니다.
+
+```
+axon.eventhandling.processors.name.mode=trakcing
+\# 정의된 모드에서 사용할 스레드의 최대 개수를 설정합니다.
+axon.eventhandling.processors.name.threadCount=2
+\# 세그먼트의 초기 개수를 설정합니다. (예, 전체 스레드의 최대 개수를 정의합니다.)
+axon.EventHandling.processors.name.initialSegmentCount=4
+
+```
+
+### AMQP 활성화, Enabling AMQP
+AMQP와 연동을 하기 위해서, 반드시 ```axon-amqp``` 모듈이 클래스패스에 있어야 하며 AMQP ```ConnectionFactory```를 애플리케이션 컨텍스에 사용 가능한 상태로 등록되어 있어야 합니다. (예, ```spring-boot-starter-amqp```를 의존성(dependency)에 추가하여 AMQP ```ConnectionFactory```를 애플리케이션 컨텍스에 등록합니다.)
+
+애플리케이션내에서 생성된 이벤트들을 AMQP 채널로 전달하려면, 아래와 같은 단 한줄의 ```application.properties``` 설정을 추가하기만 하면 됩니다.
+
+```
+axon.amqp.exchage=ExchangeName
+
+```
+
+위와 같이 설정하면, 게시된 이벤트들은 자동으로 설정된 이름에 해당하는 AMQP Exchange로 전달됩니다. 기본적으로, 이벤트를 전달할때, 어떤 AMQP 트랜잭션들도 사용되지 않지만, ```axon.amqp.transaction-mode``` 속성값을 ```trasactional```혹은 ```publisher-check```으로 재정의하여 변경할 수 있습니다.
+
+큐로부터 이벤트들을 받고 받은 이벤트들을 Axon 애플리케이션 안에서 처리하려면, ```SpringAMQPMessageSource```를 설정해야 합니다.
+
+```
+@Bean
+public SpringAMQPMessageSource myQueueMessageSource(AMQPMessageConverter messageConverter) {
+  return new SpringAMQPMessageSource(messageConverter) {
+    @RabbitListener(queues="myQueue")
+    @Override
+    public void onMessage(Message message, Channel channel) throws Exception {
+      super.onMessage(message, channel);
+    }
+  };
+}
+
+```
+
+위와 같이 ```SpringAMQPMessageSource```를 설정한 후에, 설정한 ```SpringAMQPMessageSource``` 빈을 메세지 소스로 사용하도록 프로세서를 설정합니다.
+
+```
+axon.eventhandling.processors.name.source=myQueueMessageSource
+
+```
+
+### 분산 명령 처리, Distributing commands
+대부분의 경우, 설정 파일을 변경하지 않고 분산 커맨드를 구성할 수 있습니다.
+
+첫번째로, 분산 커맨드 버스 모듈을 의존성(dependency)에 추가합니다. (예, JGroups 혹은 SpringCloud)
+
+분산 커맨드 버스 모듈을 의존성(dependency)에 추가한 후, 애플리케이션 컨텍스에 아래와 같은 분산 커맨드 버스를 활성화하는 하나의 속성을 추가합니다.
+
+```
+axon.distributed.enabled=true
+
+```
+
+사용된 커넥터의 타입에 상관없이 공통으로 사용되는 설정은 아래와 같습니다.
+
+```
+axon.distributed.load-factor=100
+
+```
+
+```CommandRouter```와 ```CommandBusConnector```들이 애플리케이션 컨텍스트에 존재하면, Axon은 자동으로 분산 커맨드 버스를 설정하게 됩니다. 이 경우, ```axon.distributed.enabled``` 속성은 명시하지 않아도 되며, 라우터와 커넥터들의 자동 설정이 활성화 됩니다.
+
 #### Using JGroups
+
+
 #### Using Spring Cloud
 
 ## Advanced Customizations
