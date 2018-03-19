@@ -2407,9 +2407,29 @@ axon.distributed.spring-cloud.fallback-url=/message-routing-information
 ## 성능 개선, Performance Tuning
 Axon 3 버전에 맞게 수정 예정
 
+이번장은 운영 환경 수준의 성능을 내기 위해 준비해야할 체크 리스트와 몇가지 가이드 라인들을 포함하고 있습니다. 지금까지 직접 구현한 명령 처리 로직과 사가(Saga)들을 테스트 하기 위해 테스트 픽스쳐(fixture)를 사용해 왔을 것입니다. 운영 환경은 테스트 환경 처럼 실수나 결함을 너그럽게 처리할 수 있는 환경이 아닙니다. Aggregate들은 보다 오래 살아 있을 것이고 보다 자주 그리고 동시적으로 사용이 될 것입니다. 추가 성능 및 안정성을 가지기 위해서, 특정 요구 사항에 맞게 설정 사항을 조정하는 것이 좋습니다.
 
-### Database Indexes and Column Types
-#### SQL Databases
+### 데이터베이스 인텍스와 컬럼 타입, Database Indexes and Column Types
+
+#### SQL 데이터베이스, SQL Databases
+예를 들어 하이버네이트와 같은 JPA 구현체를 사용하여 자동으로 생성된 테이블들을 가지고 있다면, 각각의 테이블에 맞는 인덱스를 모두 설정하지 못했을 것입니다. 이벤트 저장소의 다른 사용 용도에 따라 최적의 성능을 낼 수 있도록 다른 인덱스가 설정이 될 필요가 있습니다. 다음의 목록을 통해, 기본 ```EventStorageEngine``` 구현체에서 사용되는 다른 유형의 쿼리에 추가해야할 인덱스들을 알 수 있을 것입니다.
+
+* 이벤트 정렬과 로딩과 같은 일반적인 작업에 사용: 'DomainEventEntry' 테이블은 ```aggregateIdentifier```와 ```sequenceNumber``` 칼럼을 가지며, 두 칼럼은 유니크 인덱스로 사용됩니다. 그리고 'DomainEventEntry' 테이블은 ```eventIdentifier``` 칼럼을 유니크 인덱스로 사용합니다.
+
+* 스냅샷 생성: 'SnapshotEventEntry' 테이블은 ```aggregateIdentifier```와 ```eventIdentifier```를 칼럼으로 가지며, ```aggregateIdentifier```, ```sequenceNumber``` 그리고 ```type```들을 조합하여 primary key로 사용합니다. 또한 ```eventIdentifier``` 칼럼을 유니크 인덱스로 사용합니다.
+
+* 사가(Saga): 'AssosiationValueEntry' 테이블은 ```assosiationKey```, ```assosiationValue```, ```sagaId``` 그리고 ```sagaType```들을 칼럼으로 가집니다. ```sagaType```, ```associationKey``` 그리고  ```associationValue```칼럼들을 일반 인덱스(유니크 하지 않은)로 사용하며, ```sagaId```과 sagaType```를 유니크 하지 않은 또 다른 인덱스로 사용합니다.
+
+예를 들어 하이버네이트가 생성한 기본 칼럼 길이로 작동하는데 문제는 없지만 최적은 아닐 수 있습니다. 한 예로, UUID는 항상 동일한 길이를 가지게 됩니다. 따라서 255자의 가변 길이 칼럼 대신, aggregate 식별자에 대해 36자리를 고정 길이로 가지는 칼럼을 사용하는 것이 좋습니다.
+
+DomainEventEntry 테이블의 '타임 스탬프' 칼럼은 ISO 8601 타임 스탬프들만을 저장합니다. UTC 타임존내의 모든 시간을 저장해야 한다면, 24자 길이의 칼럼을 사용해야 합니다. 만약 다른 타임존을 사용한다면, 28자 길이까지 가능합니다. 타임 스탬프 값은 항상 동일한 길이의 값을 가지기 때문에, 가변 길이의 칼럼을 사용하는 것은 일반적으로 불 필요합니다.
+
+> 경고
+>
+> 모든 시간값(타임 스탬프)를 UTC 형식으로 저장하는 것을 강력히 권고합니다. 일광 절약 시간제(Day-light Savings Time)을 사용하는 나라들에서, 현지 시간으로 시간값을 저장하면 나중에 시간대 변경 전후에 생성된 이벤트들을 정렬할때 에러가 발생 될 수 있습니다. 하지만 UTC 형식으로 시간값을 저장하면 에러는 발생하지 않습니다. 일부 서버들은 UTC 형식을 사용하도록 설정이 되어 있지만, 시간값을 UTC 형식으로 변경하도록 이벤트 저장소를 설정해야 합니다.
+
+DomainEventEntry 테이블의 'type' 칼럼은 aggregate의 타입 식별자들을 저장합니다. 일반적으로, 타입 식별자들은 aggregate의 '간단한 이름' 입니다. 스프링의 악명높은  'AbstractDependencyInjectionSpringContextTests'는 45자나 됩니다. 다시 말하지만, 보다 더 짧은 길이의(하지만 가변의) 항목이면 충분합니다.
+
 ### MongoDB
 ### Caching
 ### Snapshotting
