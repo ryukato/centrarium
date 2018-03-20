@@ -2465,12 +2465,39 @@ DomainEventEntry 테이블의 'type' 칼럼은 aggregate의 타입 식별자들�
 
 스냅샷에 대해 더 자세한 내용을 알고 있다면, [스냅샷 지정](https://github.com/AxonFramework/ReferenceGuide/blob/3.1/part3/repositories-and-event-stores.md#snapshotting)을 살펴보세요.
 
-### Event Serializer tuning
-#### XStream Serializer
-#### Preventing duplicate serialization
-#### Different serializer for Events
-### Custom Identifier generation
+### 이벤트 직렬화 개선, Event Serializer tuning
 
+#### XStream 직렬화 객체, XStream Serializer
+XStream은 설정 가능하고 확장성이 매우 좋습니다. 만약 평범한 ```XStreamSerializer```를 사용한다면, 빠르게 개선 시킬 수 있는 방법들이 있습니다. XStream은 패키지 명과 이벤트 클래스 명들에 대한 별명(alias)들을 사용할 수 있게 해줍니다. 별명들은 일반적으로 특히, 긴 패키지 명을 사용하고 있다면, 훨씬 짧은 이름을 사용하며, 직렬화된 형태의 이벤트를 더 작게 만듭니다. XML을 사용하기 때문에, XML에서 제거된 각각의 문자들로 두배의 효과를 얻습니다. (하나는 시작 태그이고 나머지는 종료 태그 입니다.) XStream에서 보다 고급 주제는 사용자 정의 컨버터(converter)를 생성하는 것입니다. 기본 리플렉션(reflection) 기반의 컨버터들은 간단하지만, 가장 최적화된 XML을 생성하지는 않습니다. 항상 생성된 XML을 유심히 살펴보고 모든 정보들이 원래의 인스턴스를 재구성하는데 필요한지 봐야 합니다.
+
+가능하다면 업 캐스터의 사용을 자제하세요. 필드명이 변경이 되었을 때, XStream은 변경된 필드에 별명의 사용을 허용합니다. 수정 번호 0의 이벤트가 있다 하고, 해당 이벤트가 "clientId"라는 항목을 사용한다고 가정합니다. 사업적 측면에선 "고객(customer)"라는 용어를 선호 하기 때문에, 수정 번호 1의 이벤트를 생성하고 "customerId"라는 속성을 가지도록 해봅니다. XStream은 해당 속성에 별명을 사용하도록 설정하여 이런 변경 사항을 처리 할 수 있도록 해줍니다. 다음과 같은 순서로 두개의 별명을 설정해야 하는데, 첫번째는 "customerId" 별명을 "clientId"에 사용하고 두번째로 "customerId" 별명을 "customerId"에 사용합니다. 이 설정을 통해 XStream으로 하여금 "customerId"라는 속성을 발견하면, 이 속성에 해당하는 XML 엘레멘트 "customerId"를 사용하도록 합니다. (두번째 설정은 첫번째를 재정의(override) 합니다.) 반면 XStream은 "clientId"라는 XML 엘레멘트를 만나게 되면, 해당 엘레멘트는 "customerId" 속성으로 처리 하게 됩니다. 더 많은 내용은 XStream 문서를 참고하세요.
+
+최상의 성능을 위해서, 리플렉션 기반의 메커니즘을 사용하지 않는 것이 좋습니다. 리플렉션 기반의 메커니즘을 사용하지 않는 경우에는, 직렬화 매커니즘을 직접 정의 하여 사용하는 것이 가장 좋은 방법일 것입니다. ```DataInputStream```과 ```DataOutputStream```들을 통해 쉽게 이벤트의 내용을 output stream으로 보낼 수 있습니다. ```ByteArrayOutputStream```과 ```ByteArrayInputStream```을 통해 바이트 어레이(byte array)로 일고 쓸 수 있습니다.
+
+#### 중복 직렬화 방지, Preventing duplicate serialization
+분산 시스템에서 특히, 이벤트 메세지들을 여러번 직렬화 할 필요가 있습니다. Axon의 콤포넌트들은 ```SerializationAware``` 메세지에 대한 지원을 하여, 만약 ```SerializationAware``` 메세지를 발견하면, 단순히 메세지의 페이로드를 직렬화 객체에 전달하기 않고 ```SerializationAware```의 직렬화 메서드를 호출하여 객체를 직렬화 합니다. ```SerializationAware``` 메서드들은 동일한 직렬화 객체를 사용하여 여러번 직렬화를 하는 경우 동일한 직렬화된 객체를 반환 합니다. (```SerializedObjectHolder```를 참조하시면 됩니다.) 이를 통해 성능 개선을 할 수 있습니다.
+
+직접 메세지를 직렬화 하면서 ```SerializationAware```의 최적화 이점을 원한다면, 메세지의 페이로드와 메터 데이터를 직렬화 하기 위해 ```MessageSerializer``` 클래스를 사용하세요. 모든 최적화 로직은 ```MessageSerializer```에 구현되어 있습니다. 상세 내용은 ```MessageSerializer```의 JavaDoc을 참고하세요.
+
+#### 이벤트를 위한 다른 직렬화 객체 사용, Different serializer for Events
+이벤트 소싱을 사용할 때, 직렬화된 이벤트들은 오랜 시간 동안 지속될 수 있기 때문에, 직렬화 객체의 형식을 신중히 선택해야 합니다. 이벤트들에 대해 별도의 직렬화 객체를 설정하여 사용하는 것을 고려해야 하며, 이벤트들을 저장하는 방법을 조심하여 최적화 해야 합니다. Jackson에 의해 생성된 JSON 형식은 XStream의 XML 형식보다 일반적으로 오래 기간 지속되는 이벤트에 보다 더 적합니다.
+
+### 사용자 정의 식별자 생성, Custom Identifier generation
+Axon Framework은 ```IdentifierFactory```를 사용하여 이벤트 혹은 명령들에 대한 모든 식별자들을 생성합니다. 기본 ```IdentifierFactory```는 무작위로 생성된 ```java.util.UUID``` 기반의 식별자들을 사용합니다. 비록 ```java.util.UUID``` 기반의 식별자들이 사용하기에 안전하긴 하지만, 생성하는 프로세스는 성능상 뛰어나진 않습니다.
+
+```IdentifierFactory```는 사용 가능한 구현체를 찾기 위해 Java(Java 6 이후의)의 서비스로더(ServiceLoader) 메커니즘을 사용하는 추상 팩토리 입니다. 즉, ```IdentifierFactory```를 직접 구현하여 사용할 수 있습니다. 직접 ```IdentifierFactory```를 구현한 경우, ```/META-INF/services/org.axonframework.common.IdentifierFactory" 파일에 해당 구현체의 이름을 적어 주어야 합니다. Java의 서비스로더 메커니즘은 해당 파일을 발견하여 파일안에 명시된 클래스의 인스턴스를 생성합니다.
+
+```IdentifierFactory```를 구현하기 위한 몇가지 필요 사항들은 다음과 같습니다. 구현체는 반드시
+
+* 패키지명을 포함한 전체 클래스명이 클래스 패스 상의 ```/META-INF/services/org.axonframework.common.IdentifierFactory" 파일에 포함되어야 합니다.
+
+* 매개 변수를 가지지 않는 기본 생성자를 가지고 있어야 합니다.
+
+* ```IdentifierFactory```를 상속해야 합니다.
+
+* 애플리케이션의 컨텍스트 클래스로더 혹은 ```IdentifierFactory``` 클래스를 로드한 클래스로더가 접근 할 수 있어야 합니다.
+
+* 그리고 반드시 스레드 세이프(다중 스레드 환경에서 부작용 없이 사용 가능)해야 합니다.
 
 ## Glossary
 ### Scalable
