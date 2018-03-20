@@ -2458,7 +2458,13 @@ DomainEventEntry 테이블의 'type' 칼럼은 aggregate의 타입 식별자들�
 
   기본적으로, 캐쉬는 분 단위의 비교적 짧은 시간동안 살아 있는 경향이 있습니다. 일관관 라우팅을 갖는 명령 처리 콤포넌트에 대해, 보통 좀 더 긴 유휴 시간과 유효 시간을 설정하는 것이 좋습니다. 좀 더 긴 유효 시간과 유휴 시간으로, 캐쉬가 만료되어 aggregate를 이벤트들로부터 재 구성하는 것을 방지할 수 있습니다. 유효 시간은 aggregate이 살아 있어야 하는 시간과 동일하게 설정해야 합니다.
 
-### Snapshotting
+### 스냅샷 사용, Snapshotting
+스냅샷을 생성하면, 많은 수의 이벤트들을 다시 로드하고 리플레이하지 않아도 됩니다. 단일 스냅샷은 특정 시간의 전체 aggregate의 상태를 포함합니다. 하지만 스냅샷을 생성하는 프로세스 자체는 처리 시간이 소요됩니다. 따라서, 스냅샷을 생성하고 스냅샷을 사용하여 많은 이벤트들을 다시 읽어 들이는 시간들 간의 균형이 필요합니다.
+
+이벤트의 개수를 명시하여 스냅샷을 생성해야 하는 애플리케이션이 있을 수 있고, 시간 간격을 기반으로 스냅샷을 생성해야 하는 애플리케이션이 있을 수 있습니다. 따라서 어떤 방법을 선택하던 오랜 기간 살아 있어야 하는 aggregate을 가지고 있다면, 반드시 스냅샷을 사용해야 합니다.
+
+스냅샷에 대해 더 자세한 내용을 알고 있다면, [스냅샷 지정](https://github.com/AxonFramework/ReferenceGuide/blob/3.1/part3/repositories-and-event-stores.md#snapshotting)을 살펴보세요.
+
 ### Event Serializer tuning
 #### XStream Serializer
 #### Preventing duplicate serialization
