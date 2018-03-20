@@ -2430,8 +2430,34 @@ DomainEventEntry 테이블의 '타임 스탬프' 칼럼은 ISO 8601 타임 스�
 
 DomainEventEntry 테이블의 'type' 칼럼은 aggregate의 타입 식별자들을 저장합니다. 일반적으로, 타입 식별자들은 aggregate의 '간단한 이름' 입니다. 스프링의 악명높은  'AbstractDependencyInjectionSpringContextTests'는 45자나 됩니다. 다시 말하지만, 보다 더 짧은 길이의(하지만 가변의) 항목이면 충분합니다.
 
-### MongoDB
-### Caching
+### 몽고디비, MongoDB
+기본적으로, MongoEventStore는 수정 작업이 필요한 인덱스만을 생성합니다. 즉, 이벤트 스토어가 생성될 때, "Aggregate Identifier", "Aggregate Type" 그리고 "Event Sequence"의 조합으로 이루어진 유니크(unique)한 인덱스가 생성이 됩니다. 하지만, MongoEventStore를 사용하면서 특정 작업들을 위해 필요한 인덱스들을 추가할 수 있습니다.
+
+조회를 위한 쿼리 최적화와 업데이트 속도간의 균형은 항상 필요하다는 것에 유의하세요. 로드(load) 테스트는 최상의 성능을 위해 필요한 인덱스를 찾는 가장 좋은 방법입니다.
+
+* 일반적인 작업에 사용: "domain events"라는 기본 이름을 가지는 도메인 이벤트 컬렉션의 "aggregateIdentifier", "type" 그리고 "sequenceNumber"들로 이루어진 인덱스를 자동으로 생성합니다.
+
+* 스냅샷 생성: 스냅샷 이벤트 컬렉션(기본 이름: "snapshotevents")의 "aggregateIdentifier", "type" 그리고 "sequenceNumber"로 유니크한 인덱스를 생성합니다.
+
+* 이벤트 리플레이(replaying): 도메인 이벤트(기본 이름: "domainevents") 컬렉션의 "timestamp"와 "sequenceNumber"로 구성된 유일하지 않은 인덱스를 생성합니다.
+
+* 사가(Saga): 사가(기본 이름: "sagas") 컬렉션의 "sagaIdentifier"로 유니크한 인덱스를 생성합니다. 그리고 사가(기본 이름: "sagas") 컬렉션의 "sagaType", "associations.key" 그리고 "associations.value" 속성들로 구성된 인덱스를 생성합니다.
+
+### 캐쉬 사용, Caching
+잘 설계된 명령 처리자 모듈은 캐슁을 구현하여 사용할때 어떤 문제가 일으키지 않아야 합니다. 특히 이벤트 소싱을 사용할 때, 이벤트 스토어로부터 aggregate를 로딩하는 것은 비싼 작업 입니다. 적절하게 설정된 캐쉬를 사용하면, aggregate 로딩을 메모리 기반 작업으로 변경할 수 있습니다.
+
+캐쉬를 사용하기 위한 몇 가지 가이드 라인은 아래와 같습니다.
+
+* 작업 단위(Unit Of Work)가 기능상의 이유로 롤백을 수행할 필요가 없음을 확인하세요.
+  롤백은 aggregate가 올바르지 않은 상태로 변경되었다는 것을 의미합니다. Axon은 관련된 캐쉬 항목들을 자동으로 없애버립니다. 다음 요청은 aggregate를 이벤트로부터 재 구성하도록 강제합니다. 만약 잠재적인(기능적) 반환 값으로 예외를 사용한다면, ```RollbackConfiguration```을 커맨드 버스에 설정할 수 있습니다. 기본적으로, 작업 단위는 런타임 예외가 발생하면 롤백 처리를 하게 됩니다.
+
+* 단일 aggregate를 위한 모든 명령들은 aggregate를 캐쉬하고 있는 서버(machine)에 전달되어야 합니다.
+  즉, 해당 명령들은 일관되게 동일한 서버(machine)으로 라우팅 되어야 합니다. 단 해당 서버가 정상 작동하는 동안에만 해당 합니다. 동일한 서버로 명령들을 라우팅 하는 것은 캐쉬를 정상적으로 사용할 수 있도록 합니다. 비 정상적인(stale) 캐쉬를 사용하여 명령을 실행하면, 이벤트를 이벤트 저장소에 저장할 수 없습니다.
+
+* 알맞은 유효(time to live) 및 유휴 시간(time to idle)을 설정하세요.
+
+  기본적으로, 캐쉬는 분 단위의 비교적 짧은 시간동안 살아 있는 경향이 있습니다. 일관관 라우팅을 갖는 명령 처리 콤포넌트에 대해, 보통 좀 더 긴 유휴 시간과 유효 시간을 설정하는 것이 좋습니다. 좀 더 긴 유효 시간과 유휴 시간으로, 캐쉬가 만료되어 aggregate를 이벤트들로부터 재 구성하는 것을 방지할 수 있습니다. 유효 시간은 aggregate이 살아 있어야 하는 시간과 동일하게 설정해야 합니다.
+
 ### Snapshotting
 ### Event Serializer tuning
 #### XStream Serializer
