@@ -34,7 +34,7 @@ categories: [JavaScript, ESLint]
 ### Fix
 `$1 $2 $3\n\n`
 
-## no-trailing-spaces
+## space-before-blocks
 ### Find
 `\((.*)\)\{`
 ### Fix
