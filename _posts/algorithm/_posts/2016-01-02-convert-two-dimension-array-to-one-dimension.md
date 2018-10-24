@@ -1,77 +1,188 @@
 ---
 layout: post
-title: Find missing numbers in array.
-date: 2018-11-23 09:36:55
-tags: Algorithm find-missing-numbers
+title: Converting two dimension array to one dimension array.
+date: 2016-01-02 09:36:55
+tags: Algorithm convert-array-dimension
 categories: [Algorithm]
 ---
 
 * TOC
 {:toc}
 
-### 1부터 100(혹은 더 큰 범위)에서 빠진 숫자들을 찾아라
-예) 1부터 10까지의 범위에서 빠진 숫자를 찾으라는 문제로 1부터 10까지의 수, 1, 2,3 4, 5, 6, 7, 8, 9, 10 중에 빠진 숫자를 찾으라는 것이다.
+# 2차원 배열(grid)를 1차원 배열로 변환
+2차원 배열을 1차원 배열로 변환하는게 어렵지 않을 것 같은데, 또 막상 생각하면 이런 저런 삑싸리가 많이 나는 코드를 작성하게 되는 것 같아서, 이번에 작성을 해놓고 나중에 이 코드를 참조를 해야겠다.
 
-이 문제는 빠진 숫자가 하나인지 혹은 하나 이상인지에 따라 푸는 방식과 복잡도가 달라지게 된다. 그리고 주어진 숫자들이 정렬이 되어 있는지는 크게 중요하지 않다.
+## Grid
+Grid는 n \* n Grid를 기본으로 사용하였다. m \* n도 그렇게 크게 다르진 않을 것이라고 생각되기때문에.
+> m \* n이라고 해도, 실제로 중요한간 가로의 사이즈 즉, m이 중요하다고 생각된다.
 
-따라서 이런 질문을 받는다면, 먼제 빠진 숫자가 하나 인지 혹은 하나 이상인지를 먼저 물어봐야 한다.
+일단 두개의 메서드가 필요하다.
+* getIndexFrom(int x, int y): x, y값으로부터 일차원 배열의 index를 반환해주는 메서드
+* getPointFrom(int index): 1차원 배열의 index로부터 x, y값을 반환해주는 메서드
 
-빠진 숫자가 하나인 경우라면, 답은 굉장히 쉽다. 아래의 공식만 알면 되기 때문이다. 주어진 범위내의 숫자들의 합은 다음의 공식으로 구할 수 있다.
+### 1차원 배열의 index 구하기
+x, y값으로부터 1차원 배열의 index를 구하는 공식은 아래와 같다.
+> N은 grid의 사이즈
 
-`n * (n+1)/2`
-
-위의 공식으로 전체 합(expectedSum)을 구하고, 주어진 배열에 포함된 숫자들의 합(actualSum)을 구해서 전체 합에서 빼면 빠진 숫자가 나오게 된다. 이때 배열에 포함된 숫자들의 합을 구하려면 포함된 숫자의 개수 만큼 반복해서 합을 구해야 한다. 따라서 복잡도는 `O(n)`이 된다.
-
-해당 알고리즘에 대한 코드는 다음과 같을 수 있다.
-
-###### Java8 이전 버전
 ```
-private static int findMissingNumber(int[] numbers, int totalCount) {
-	int expectedSum = totalCount * (totalCount + 1) /2;
-	int actualSum = 0;
-	for(int i : numbers) {
-		actualSum += i;
-	}
-	return expectedSum - actualSum;
+N * (x -1) + (y -1)
+```
+
+x, y에서 각각 -1을 해준 것은 1차원 배열의 index는 0부터 시작하기 때문이다. 따라서 getIndexFrom(int x, int y)의 전체 코드 내용은 아래와 같다.
+
+```
+public int getIndexFrom(int x, int y){
+    return this.size * (x -1) + (y -1);
+}
+
+```
+
+### index로부터 x, y 구하기
+1차원 배열의 index를 구할때의 공식의 x를 가지고 계산하는 부분은 아래와 같고
+
+```
+N * (x -1)
+```
+
+이를 역으로 치환하면
+
+```
+(index / N) + 1
+```
+
+그리고 y는 아래와 같이 구할 수 있다.
+
+```
+(index % N) + 1
+```
+
+따라서 getPointFrom(int index)의 전체 코드는 아래와 같다.
+
+```
+public Point getPointFrom(int index){
+    int x = (int) (index / this.size) + 1;
+    int y = (index % this.size) + 1;
+    return new Point(x, y);
 }
 ```
 
-###### Java8이후 버전
-```
-private static int findMissingNumber(int[] numbers, int totalCount) {
-	int expectedSum = totalCount * (totalCount + 1) /2;
-	int actualSum = Arrays.stream(numbers).reduce(Integer::sum).getAsInt()
+## 전체 코드 및 테스트 코드
+### 전체 코드
 
-	return expectedSum - actualSum;
+```
+public class Grid<E> {
+  private final int size;
+  private final Object[] elements;
+
+  public Grid(int size){
+      this.size = size;
+      this.elements = new Object[this.size * this.size];
+  }
+
+  public int getIndexFrom(int x, int y){
+      return this.size * (x -1) + (y -1);
+  }
+
+  public int getIndexFrom(Point point){
+      return this.size * (point.getX() -1) + (point.getY() -1);
+  }
+
+  public Point getPointFrom(int index){
+      int x = (int)(index / this.size) + 1;
+      int y = (index % this.size) + 1;
+      return new Point(x, y);
+  }
+
+  public void add(int index, E e){
+      if(index >= this.size){
+          throw new IndexOutOfBoundsException();
+      }
+      this.elements[index] = e;
+  }
+
+  public void add(int x, int y, E e){
+      int index = getIndexFrom(x, y);
+      this.add(index, e);
+  }
+
+  public static class Point{
+      private final int x;
+      private final int y;
+      public Point(int x, int y){
+          this.x = x;
+          this.y = y;
+      }
+      public int getX() {
+          return x;
+      }
+      public int getY() {
+          return y;
+      }
+      @Override
+      public int hashCode() {
+          final int prime = 31;
+          int result = 1;
+          result = prime * result + x;
+          result = prime * result + y;
+          return result;
+      }
+      @Override
+      public boolean equals(Object obj) {
+          if (this == obj)
+              return true;
+          if (obj == null)
+              return false;
+          if (getClass() != obj.getClass())
+              return false;
+          Point other = (Point) obj;
+          if (x != other.x)
+              return false;
+          if (y != other.y)
+              return false;
+          return true;
+      }
+
+      @Override
+      public String toString() {
+          return "Point [x=" + x + ", y=" + y + "]";
+      }
+  }
 }
 ```
 
-위와 같이 누락된 숫자가 하나인 경우는 해답을 찾는 것이 그렇게 어렵진 않지만 하나 이상의 경우에는 해답을 찾는 것이 좀 더 어려울 수 있다. 그리고 찾는 방법 또한 여러가지 방법이 있을 수 있다.  
-
-여러 방법 중, 아래의 해답은 BitSet을 이용한 방법으로, BitSet의 특징과 사용법을 알아야 한다. BitSet에 대한 사용 예제는 [BitSet class 예제](http://hochulshin.com/java-bitset/)를 참고하면 될 것 같다.
-
-true, false의 boolean element로 이루어진 배열 객체인 BitSet의 특성을 이용하여 특정 범위내의 누락된 숫자를 찾는 알고리즘은 전체 주어진 숫자들을 순환(N)하면서 BitSet객체에 true값을 설정한 이후에 누락된 숫자의 개수(K)만큼 반복하여 BitSet 객체에 설정된 false 값의 인덱스(누락된 숫자)를 취하여 누락된 숫자들을 찾아내는 것이다. 코드는 다음과 같으며 복잡도는 O(2n)으로 생각된다.
-
-> Note
->
-> N은 주어진 숫자의 개수
-
-> K는 누락된 숫자의 개수, 즉, K = 범위내의 전체 숫자(T) - N. 최악의 경우 K = N이 될 수 있다.
+### 테스트 코드
 
 ```
-private static int[] findMissingNumbers(int[] numbers, int totalCount) {
-    int missingCount = totalCount - numbers.length;
-    BitSet bitSet = new BitSet(totalCount);
-    for (int number: numbers) {  // N번 만큼 반복
-        bitSet.set(number-1, true);
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Test;
+
+public class GridTest {
+    @Test
+    public void test_(){
+        Grid<?> grid1 = new Grid<>(3);
+
+        assertEquals(0, grid1.getIndexFrom(1, 1));
+        System.out.println(grid1.getIndexFrom(1, 1)); // 0
+        System.out.println(grid1.getIndexFrom(1, 2)); // 1
+        System.out.println(grid1.getIndexFrom(1, 3)); // 2
+        System.out.println(grid1.getIndexFrom(2, 1)); // 3
+        System.out.println(grid1.getIndexFrom(2, 2)); // 4
+        System.out.println(grid1.getIndexFrom(2, 3)); // 5
+        System.out.println(grid1.getIndexFrom(3, 1)); // 6
+        System.out.println(grid1.getIndexFrom(3, 2)); // 7
+        System.out.println(grid1.getIndexFrom(3, 3)); // 8
+
+        assertEquals(new Grid.Point(1, 1), grid1.getPointFrom(0));
+        System.out.println(grid1.getPointFrom(0)); // 1,1
+        System.out.println(grid1.getPointFrom(1)); // 1,2
+        System.out.println(grid1.getPointFrom(2)); // 1,3
+        System.out.println(grid1.getPointFrom(3)); // 2,1
+        System.out.println(grid1.getPointFrom(4)); // 2,2
+        System.out.println(grid1.getPointFrom(5)); // 2,3
+        System.out.println(grid1.getPointFrom(6)); // 3,1
+        System.out.println(grid1.getPointFrom(7)); // 3,2
+        System.out.println(grid1.getPointFrom(8)); // 3,3
     }
-    int lastMissingIndex = numbers[0];
-    int[] missingNumbers = new int[missingCount];
-    for (int i = 0; i < missingCount; i++) {  // K번만큼 반복
-    	// 주어진 index 값으로부터 첫번째 false 값을 찾고 index 값을 증가.
-        lastMissingIndex = bitSet.nextClearBit(lastMissingIndex);
-        missingNumbers[i] = ++lastMissingIndex;
-    }
-    return missingNumbers;
 }
 ```
