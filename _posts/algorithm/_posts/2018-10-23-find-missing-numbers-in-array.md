@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Find missing numbers in array.
-date: 2018-11-23 09:36:55
+date: 2018-10-23 09:36:55
 tags: Algorithm find-missing-numbers
 categories: [Algorithm]
 ---
