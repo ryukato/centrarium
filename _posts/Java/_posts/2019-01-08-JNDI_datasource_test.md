@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Tomcat JNDI로 설정되어 있는 Data-source를 단위 테스트에서 사용하기.
-date: 2019-01-09 09:36:55
+date: 2019-01-08 09:36:55
 tags: [Tomcat, JNDI, Unit-testing]
 categories: [Java]
 ---
